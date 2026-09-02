@@ -167,6 +167,28 @@ After the GitHub Release artifacts for the tag are published, also update:
 
 The AUR `PKGBUILD` lives in an **external AUR repository**, not in this repo. It is bumped only for stable tags.
 
+## Artifact Signing
+
+Release artifacts get a detached GPG signature (`.asc`) beside each file and a
+`.sha256` checksum. Signing requires two repository secrets:
+
+- `GPG_PRIVATE_KEY` — the armored private key
+- `GPG_PASSPHRASE` — its passphrase
+
+**Signing is optional.** When either secret is missing, `build.yml` skips every
+signing step and publishes the installers with checksums only. This is what lets
+a fork cut its own releases without inheriting or reproducing a signing key. The
+build never fails for want of a key — it just ships unsigned.
+
+Independent of GPG, every release attaches a build provenance attestation
+(`actions/attest-build-provenance`). That is keyless and always on, so an
+artifact can be traced to the workflow run and commit that produced it even
+when no signature is present:
+
+```bash
+gh attestation verify dbflux-macos-arm64.dmg --repo <owner>/dbflux
+```
+
 ## How Nightly Works
 
 `.github/workflows/nightly.yml` runs daily at 03:17 UTC:

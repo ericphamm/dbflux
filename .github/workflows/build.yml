@@ -17,13 +17,20 @@ on:
         type: boolean
         default: false
     secrets:
+      # Optional on purpose. A fork that has not set up a signing key still
+      # builds and publishes installers; it just ships them without detached
+      # signatures. `required: true` here would fail the caller outright.
       GPG_PRIVATE_KEY:
-        required: true
+        required: false
       GPG_PASSPHRASE:
-        required: true
+        required: false
 
 env:
   FEATURES: "sqlite,postgres,mysql,mssql,mongodb,redis,dynamodb,cloudwatch,influxdb,clickhouse,aws"
+  # Every signing step keys off this. The `secrets` context is not available in
+  # a step-level `if`, but it is in a workflow-level `env`, so the emptiness
+  # check happens once here and the steps read the resulting flag.
+  SIGNING_ENABLED: ${{ secrets.GPG_PRIVATE_KEY != '' && secrets.GPG_PASSPHRASE != '' }}
 
 permissions:
   contents: read
@@ -257,15 +264,18 @@ jobs:
           ~/go/bin/nfpm package --packager rpm --config nfpm.rpm.yaml --target ${PKG_NAME}-${VERSION}-1.${{ matrix.rpm_arch }}.rpm
 
       - name: Install signing tools
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: sudo apt-get install -y rpm debsigs
 
       - name: Import GPG key
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd  # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign .deb packages
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
           GPG_KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 'pub' | tail -1 | awk '{print $1}')
           for deb in *.deb; do
@@ -273,6 +283,7 @@ jobs:
           done
 
       - name: Configure RPM signing
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
           GPG_KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 'pub' | tail -1 | awk '{print $1}')
           {
@@ -282,6 +293,7 @@ jobs:
           } > ~/.rpmmacros
 
       - name: Sign .rpm packages
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
@@ -290,6 +302,7 @@ jobs:
           done
 
       - name: Sign artifacts
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
           gpg --armor --detach-sign dbflux-linux-${{ matrix.arch }}.tar.gz
           gpg --armor --detach-sign dbflux-linux-${{ matrix.arch }}.AppImage
@@ -327,18 +340,23 @@ jobs:
         if: env.ACT == 'true'
         run: |
           mkdir -p /tmp/artifacts/linux-${{ matrix.arch }}
-          cp dbflux-linux-${{ matrix.arch }}.tar.gz /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp dbflux-linux-${{ matrix.arch }}.tar.gz.sha256 /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp dbflux-linux-${{ matrix.arch }}.tar.gz.asc /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp dbflux-linux-${{ matrix.arch }}.AppImage /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp dbflux-linux-${{ matrix.arch }}.AppImage.sha256 /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp dbflux-linux-${{ matrix.arch }}.AppImage.asc /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp *.deb /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp *.deb.asc /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp dbflux_${{ matrix.arch }}.deb.sha256 /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp *.rpm /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp *.rpm.asc /tmp/artifacts/linux-${{ matrix.arch }}/
-          cp dbflux_${{ matrix.arch }}.rpm.sha256 /tmp/artifacts/linux-${{ matrix.arch }}/
+          dest=/tmp/artifacts/linux-${{ matrix.arch }}
+          cp dbflux-linux-${{ matrix.arch }}.tar.gz "$dest"/
+          cp dbflux-linux-${{ matrix.arch }}.tar.gz.sha256 "$dest"/
+          cp dbflux-linux-${{ matrix.arch }}.AppImage "$dest"/
+          cp dbflux-linux-${{ matrix.arch }}.AppImage.sha256 "$dest"/
+          cp *.deb "$dest"/
+          cp dbflux_${{ matrix.arch }}.deb.sha256 "$dest"/
+          cp *.rpm "$dest"/
+          cp dbflux_${{ matrix.arch }}.rpm.sha256 "$dest"/
+
+          # Signatures exist only when a signing key was configured.
+          if [ "$SIGNING_ENABLED" = "true" ]; then
+            cp dbflux-linux-${{ matrix.arch }}.tar.gz.asc "$dest"/
+            cp dbflux-linux-${{ matrix.arch }}.AppImage.asc "$dest"/
+            cp *.deb.asc "$dest"/
+            cp *.rpm.asc "$dest"/
+          fi
 
   build-macos:
     name: Build macOS ${{ matrix.arch }}
@@ -485,12 +503,14 @@ jobs:
             "$APP_BUNDLE"
 
       - name: Import GPG key
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd  # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign artifacts
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
           gpg --armor --detach-sign dbflux-macos-${{ matrix.arch }}.dmg
 
@@ -514,7 +534,9 @@ jobs:
           mkdir -p /tmp/artifacts/macos-${{ matrix.arch }}
           cp dbflux-macos-${{ matrix.arch }}.dmg /tmp/artifacts/macos-${{ matrix.arch }}/
           cp dbflux-macos-${{ matrix.arch }}.dmg.sha256 /tmp/artifacts/macos-${{ matrix.arch }}/
-          cp dbflux-macos-${{ matrix.arch }}.dmg.asc /tmp/artifacts/macos-${{ matrix.arch }}/
+          if [ "$SIGNING_ENABLED" = "true" ]; then
+            cp dbflux-macos-${{ matrix.arch }}.dmg.asc /tmp/artifacts/macos-${{ matrix.arch }}/
+          fi
 
   build-windows:
     name: Build Windows amd64
@@ -616,12 +638,14 @@ jobs:
         run: Move-Item installer/output/dbflux-windows-amd64-setup.exe dbflux-windows-amd64-setup.exe -Force
 
       - name: Import GPG key
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd  # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign artifacts
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
           gpg --armor --detach-sign dbflux-windows-amd64.zip
           gpg --armor --detach-sign dbflux-windows-amd64-setup.exe
@@ -655,7 +679,11 @@ jobs:
           New-Item -Path C:\tmp\artifacts\windows-amd64 -ItemType Directory -Force | Out-Null
           Copy-Item dbflux-windows-amd64.zip C:\tmp\artifacts\windows-amd64\
           Copy-Item dbflux-windows-amd64.zip.sha256 C:\tmp\artifacts\windows-amd64\
-          Copy-Item dbflux-windows-amd64.zip.asc C:\tmp\artifacts\windows-amd64\
           Copy-Item dbflux-windows-amd64-setup.exe C:\tmp\artifacts\windows-amd64\
           Copy-Item dbflux-windows-amd64-setup.exe.sha256 C:\tmp\artifacts\windows-amd64\
-          Copy-Item dbflux-windows-amd64-setup.exe.asc C:\tmp\artifacts\windows-amd64\
+
+          # Signatures exist only when a signing key was configured.
+          if ($env:SIGNING_ENABLED -eq 'true') {
+            Copy-Item dbflux-windows-amd64.zip.asc C:\tmp\artifacts\windows-amd64\
+            Copy-Item dbflux-windows-amd64-setup.exe.asc C:\tmp\artifacts\windows-amd64\
+          }
