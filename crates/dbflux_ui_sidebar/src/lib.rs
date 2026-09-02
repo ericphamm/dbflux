@@ -878,6 +878,9 @@ pub struct Sidebar {
     connections_focused: bool,
     search_input_focused: bool,
     visible_entry_count: usize,
+    /// Incremental prefix typed while the connections tree owns focus.
+    typeahead_query: String,
+    typeahead_last_input: Option<std::time::Instant>,
     /// User overrides for expansion state (item_id -> is_expanded)
     expansion_overrides: HashMap<String, bool>,
     /// State for the keyboard-triggered context menu
@@ -1142,6 +1145,8 @@ impl Sidebar {
             connections_focused: false,
             search_input_focused: false,
             visible_entry_count,
+            typeahead_query: String::new(),
+            typeahead_last_input: None,
             expansion_overrides: HashMap::new(),
             context_menu: None,
             pending_actions: HashMap::new(),

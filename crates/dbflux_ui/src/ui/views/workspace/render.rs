@@ -607,6 +607,20 @@ impl Render for Workspace {
                 let chord = key_chord_from_gpui(&event.keystroke);
                 let context = this.active_context(cx);
 
+                let modifiers = event.keystroke.modifiers;
+                if context == ContextId::Sidebar
+                    && !modifiers.platform
+                    && !modifiers.control
+                    && !modifiers.alt
+                    && let Some(typed) = event.keystroke.key_char.as_deref()
+                    && this
+                        .sidebar
+                        .update(cx, |sidebar, cx| sidebar.typeahead_select(typed, cx))
+                {
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if let Some(cmd) = this.keymap.resolve(context, &chord)
                     && this.dispatch(cmd, window, cx)
                 {

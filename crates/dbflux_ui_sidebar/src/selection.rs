@@ -13,6 +13,93 @@ enum ConnectionKeyboardMovePlan {
 }
 
 impl Sidebar {
+    const TYPEAHEAD_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(850);
+
+    /// Select the first visible table/view whose name starts with the
+    /// incrementally typed prefix. Returns whether the keystroke belongs to an
+    /// active type-ahead sequence and should therefore be consumed.
+    pub fn typeahead_select(&mut self, typed: &str, cx: &mut Context<Self>) -> bool {
+        if self.active_tab != SidebarTab::Connections
+            || typed.is_empty()
+            || typed
+                .chars()
+                .any(|ch| ch.is_control() || ch.is_whitespace())
+        {
+            return false;
+        }
+
+        let now = std::time::Instant::now();
+        let sequence_active = self
+            .typeahead_last_input
+            .is_some_and(|last| now.duration_since(last) <= Self::TYPEAHEAD_TIMEOUT);
+        if !sequence_active {
+            self.typeahead_query.clear();
+        }
+
+        self.typeahead_query.push_str(&typed.to_lowercase());
+        self.typeahead_last_input = Some(now);
+
+        let items = self.build_tree_items_with_overrides(cx);
+        let mut visible_index = 0;
+        let mut match_index =
+            Self::find_table_prefix_index(&items, &self.typeahead_query, &mut visible_index);
+
+        // If the longer sequence has no match, treat the newest character as
+        // the beginning of a fresh sequence. This mirrors native list views.
+        if match_index.is_none() && sequence_active {
+            self.typeahead_query = typed.to_lowercase();
+            visible_index = 0;
+            match_index =
+                Self::find_table_prefix_index(&items, &self.typeahead_query, &mut visible_index);
+        }
+
+        let Some(index) = match_index else {
+            return sequence_active;
+        };
+
+        self.pending_delete_item = None;
+        self.tree_state.update(cx, |state, cx| {
+            state.set_selected_index(Some(index), cx);
+            state.scroll_to_item(index, gpui::ScrollStrategy::Center);
+        });
+
+        if let Some(entry) = self.tree_state.read(cx).selected_entry().cloned() {
+            self.set_selection_anchor(entry.item().id.as_ref());
+        }
+
+        cx.notify();
+        true
+    }
+
+    fn find_table_prefix_index(
+        items: &[TreeItem],
+        prefix: &str,
+        visible_index: &mut usize,
+    ) -> Option<usize> {
+        for item in items {
+            let index = *visible_index;
+            *visible_index += 1;
+
+            let is_table_or_view = matches!(
+                parse_node_id(item.id.as_ref()),
+                Some(SchemaNodeId::Table { .. } | SchemaNodeId::View { .. })
+            );
+            if is_table_or_view && item.label.to_lowercase().starts_with(prefix) {
+                return Some(index);
+            }
+
+            if item.is_expanded()
+                && item.is_folder()
+                && let Some(index) =
+                    Self::find_table_prefix_index(&item.children, prefix, visible_index)
+            {
+                return Some(index);
+            }
+        }
+
+        None
+    }
+
     pub fn select_next(&mut self, cx: &mut Context<Self>) {
         let visible_count = self.active_visible_entry_count(cx);
         if visible_count == 0 {
