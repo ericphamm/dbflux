@@ -504,6 +504,18 @@ impl DataGridPanel {
             return self.dispatch_menu_command(cmd, window, cx);
         }
 
+        // A modified value panel owns "save", and it owns it under either
+        // name: while its editor holds the keyboard the panel reports
+        // `ContextId::TextInput`, where Cmd+S resolves to SaveQuery rather
+        // than SaveRow. Committing the row instead would write the stored
+        // value and throw away what the user just typed.
+        if matches!(cmd, Command::SaveRow | Command::SaveQuery)
+            && let Some(panel) = self.value_panel_pending_save(cx)
+        {
+            panel.update(cx, |panel, cx| panel.save(cx));
+            return true;
+        }
+
         // Handle toolbar mode commands
         if self.focus.focus_mode == GridFocusMode::Toolbar {
             match cmd {
@@ -642,6 +654,27 @@ impl DataGridPanel {
             }
             Command::ResultsCopyCell => {
                 self.handle_copy(window, cx);
+                true
+            }
+            Command::ToggleRecordView => {
+                self.set_record_mode(!self.record_mode(), cx);
+                true
+            }
+            Command::ToggleValuePanel => {
+                self.toggle_value_panel(cx);
+                true
+            }
+            Command::SaveRow => {
+                if let Some(table_state) = &self.grid_table.table_state {
+                    // Commit any open editor first, so Cmd+S from inside a cell
+                    // saves what the user just typed instead of the old value.
+                    table_state.update(cx, |state, cx| {
+                        if state.is_editing() {
+                            state.stop_editing(true, cx);
+                        }
+                        state.request_save_row(cx);
+                    });
+                }
                 true
             }
             _ => false,

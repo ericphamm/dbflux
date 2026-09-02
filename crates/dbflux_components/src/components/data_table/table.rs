@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::controls::{GpuiInput as Input, InputState};
 use crate::primitives::Text;
-use crate::tokens::{FontSizes, RowColors};
+use crate::tokens::{FontSizes, RowColors, Spacing};
 use gpui::ElementId;
 use gpui::prelude::FluentBuilder;
 use gpui::{
@@ -194,18 +194,13 @@ impl gpui::Render for DataTable {
 
         let row_count = state.row_count();
         let col_count = state.col_count();
+        let record_mode = state.record_mode();
 
         let vertical_scroll_handle = state.vertical_scroll_handle().clone();
         let horizontal_scroll_handle = state.horizontal_scroll_handle().clone();
         let focus_handle = state.focus_handle().clone();
 
         let total_width = state.total_content_width();
-
-        // Build header
-        let header = self.render_header(state, total_width, theme, cx);
-
-        // Build body using uniform_list for virtualization
-        let body = self.render_body(row_count, total_width, cx);
 
         // Clone state entity for callbacks
         let state_entity = self.state.clone();
@@ -489,37 +484,57 @@ impl gpui::Render for DataTable {
             }
         };
 
-        let inner_table = div()
-            .id("table-inner")
-            .flex()
-            .flex_col()
-            .size_full()
-            .on_scroll_wheel(on_scroll_wheel)
-            .child(header)
-            .when(row_count > 0, |this| this.child(body))
-            .when(row_count == 0 && col_count > 0, |this| {
-                this.child(
-                    div()
-                        .id("table-empty-body")
-                        .flex_1()
-                        .size_full()
-                        .on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                            cx.stop_propagation();
-                            window.focus(&focus_for_empty);
-                        })
-                        .on_mouse_down(MouseButton::Right, move |event, window, cx| {
-                            cx.stop_propagation();
-                            state_for_empty_context.update(cx, |state, cx| {
-                                state.focus(window, cx);
-                                cx.emit(DataTableEvent::ContextMenuRequested {
-                                    row: 0,
-                                    col: 0,
-                                    position: event.position,
+        // Record mode replaces the whole grid — header, body, and horizontal
+        // scrolling alike — with the transposed single-row view. It shares the
+        // root below so focus, key context, and every action binding stay
+        // identical in both presentations.
+        let inner_table = if record_mode {
+            div()
+                .id("table-inner")
+                .flex()
+                .flex_col()
+                .size_full()
+                .child(super::record::render_record(&self.state, state, cx))
+        } else {
+            // Build header
+            let header = self.render_header(state, total_width, theme, cx);
+
+            // Build body using uniform_list for virtualization
+            let body = self.render_body(row_count, total_width, cx);
+
+            div()
+                .id("table-inner")
+                .flex()
+                .flex_col()
+                .size_full()
+                .on_scroll_wheel(on_scroll_wheel)
+                .child(header)
+                .when(row_count > 0, |this| this.child(body))
+                .when(row_count == 0 && col_count > 0, |this| {
+                    this.child(
+                        div()
+                            .id("table-empty-body")
+                            .flex_1()
+                            .size_full()
+                            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                                cx.stop_propagation();
+                                window.focus(&focus_for_empty);
+                            })
+                            .on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                                cx.stop_propagation();
+                                state_for_empty_context.update(cx, |state, cx| {
+                                    state.focus(window, cx);
+                                    cx.emit(DataTableEvent::ContextMenuRequested {
+                                        row: 0,
+                                        col: 0,
+                                        position: event.position,
+                                        is_column_header: false,
+                                    });
                                 });
-                            });
-                        }),
-                )
-            });
+                            }),
+                    )
+                })
+        };
 
         div()
             .id(self.id.clone())
@@ -634,49 +649,54 @@ impl gpui::Render for DataTable {
                 .absolute()
                 .size_full()
             })
-            // Phantom scroller: owns the horizontal scroll handle for the scrollbar.
-            // It's 1px tall and positioned at the bottom, so it never receives wheel events.
-            // The mouse is always over the header or body, which don't capture horizontal wheel.
-            .child(
-                div()
-                    .id("table-hscroll-owner")
-                    .absolute()
-                    .left_0()
-                    .right(SCROLLBAR_WIDTH)
-                    .bottom_0()
-                    .h(px(1.0))
-                    .overflow_x_scroll()
-                    .track_scroll(&horizontal_scroll_handle)
-                    .child(div().min_w(px(total_width)).h(px(1.0))),
-            )
-            // Scrollbars as absolute overlays.
-            .child(
-                div()
-                    .absolute()
-                    .top(HEADER_HEIGHT)
-                    .right_0()
-                    .bottom_0()
-                    .w(SCROLLBAR_WIDTH)
-                    .when(row_count > 0, |this| {
-                        this.child(Scrollbar::vertical(&vertical_scroll_handle))
-                    }),
-            )
-            // Horizontal scrollbar uses `ScrollbarShow::Always` because the phantom
-            // scroller that owns the handle is 1px tall and never captures the wheel,
-            // so the bar would otherwise stay transparent until the user navigates
-            // off-screen with the keyboard.
-            .child(
-                div()
-                    .absolute()
-                    .left_0()
-                    .right_0()
-                    .bottom_0()
-                    .h(SCROLLBAR_WIDTH)
+            // Grid-only scroll chrome. Record mode owns a single vertical list
+            // and no horizontal axis, so it brings its own scrollbar instead.
+            .when(!record_mode, |root| {
+                root
+                    // Phantom scroller: owns the horizontal scroll handle for the scrollbar.
+                    // It's 1px tall and positioned at the bottom, so it never receives wheel events.
+                    // The mouse is always over the header or body, which don't capture horizontal wheel.
                     .child(
-                        Scrollbar::horizontal(&horizontal_scroll_handle)
-                            .scrollbar_show(ScrollbarShow::Always),
-                    ),
-            )
+                        div()
+                            .id("table-hscroll-owner")
+                            .absolute()
+                            .left_0()
+                            .right(SCROLLBAR_WIDTH)
+                            .bottom_0()
+                            .h(px(1.0))
+                            .overflow_x_scroll()
+                            .track_scroll(&horizontal_scroll_handle)
+                            .child(div().min_w(px(total_width)).h(px(1.0))),
+                    )
+                    // Scrollbars as absolute overlays.
+                    .child(
+                        div()
+                            .absolute()
+                            .top(HEADER_HEIGHT)
+                            .right_0()
+                            .bottom_0()
+                            .w(SCROLLBAR_WIDTH)
+                            .when(row_count > 0, |this| {
+                                this.child(Scrollbar::vertical(&vertical_scroll_handle))
+                            }),
+                    )
+                    // Horizontal scrollbar uses `ScrollbarShow::Always` because the phantom
+                    // scroller that owns the handle is 1px tall and never captures the wheel,
+                    // so the bar would otherwise stay transparent until the user navigates
+                    // off-screen with the keyboard.
+                    .child(
+                        div()
+                            .absolute()
+                            .left_0()
+                            .right_0()
+                            .bottom_0()
+                            .h(SCROLLBAR_WIDTH)
+                            .child(
+                                Scrollbar::horizontal(&horizontal_scroll_handle)
+                                    .scrollbar_show(ScrollbarShow::Always),
+                            ),
+                    )
+            })
     }
 }
 
@@ -719,7 +739,7 @@ impl DataTable {
 
                 let type_label: SharedString = col_spec.type_name.clone().into();
 
-                let state_for_click = state_entity.clone();
+                let state_for_column_menu = state_entity.clone();
                 let resize_drag_for_down = resize_drag.clone();
 
                 div()
@@ -738,13 +758,20 @@ impl DataTable {
                     .bg(theme.table_head)
                     .hover(|s| s.bg(theme.table_hover))
                     .cursor_pointer()
-                    .on_click(move |_event: &ClickEvent, _window, cx| {
-                        state_for_click.update(cx, |state, cx| {
-                            state.cycle_sort(col_ix, cx);
+                    .on_click(move |event: &ClickEvent, _window, cx| {
+                        state_for_column_menu.update(cx, |state, cx| {
+                            let row = state.selection().active.map(|c| c.row).unwrap_or(0);
+                            cx.emit(DataTableEvent::ContextMenuRequested {
+                                row,
+                                col: col_ix,
+                                position: event.position(),
+                                is_column_header: true,
+                            });
                         });
                     })
                     .child(
                         div()
+                            .id(("header-sort-target", col_ix))
                             .flex()
                             .flex_row()
                             .items_center()
@@ -805,15 +832,39 @@ impl DataTable {
                                 },
                             ),
                     )
-                    .child(div().child(if is_sorted {
-                        Text::body(sort_indicator)
-                            .font_size(FontSizes::SM)
-                            .color(theme.primary)
-                    } else {
-                        Text::body(sort_indicator)
-                            .font_size(FontSizes::SM)
-                            .color(theme.muted_foreground)
-                    }))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_shrink_0()
+                            .items_center()
+                            .mr(px(18.0))
+                            .when(is_sorted, |d| {
+                                d.child(
+                                    Text::body(sort_indicator)
+                                        .font_size(FontSizes::SM)
+                                        .color(theme.primary),
+                                )
+                            }),
+                    )
+                    .child(
+                        div()
+                            .id(("column-menu-trigger", col_ix))
+                            .absolute()
+                            .right(Spacing::XXS)
+                            .top_0()
+                            .bottom_0()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .w(px(18.0))
+                            .rounded(px(3.0))
+                            .hover(|d| d.bg(theme.secondary))
+                            .child(
+                                Text::body("▾")
+                                    .font_size(FontSizes::SM)
+                                    .color(theme.muted_foreground),
+                            ),
+                    )
                     // Resize handle: mouse-down starts the drag; move/up are
                     // handled on the DataTable root div so the drag survives
                     // the cursor leaving this 6px strip.
@@ -970,6 +1021,7 @@ fn render_rows(
 
             // Use visual_ix for selection/display, but data_row_ix for edit buffer access
             let row_ix = visual_ix;
+            let is_active_row = selection.active.is_some_and(|coord| coord.row == row_ix);
 
             // Row background based on state
             // - Dirty: cell-level only (no row bg)
@@ -1118,6 +1170,7 @@ fn render_rows(
                                         row: coord.row,
                                         col: coord.col,
                                         position: event.position,
+                                        is_column_header: false,
                                     });
                                 });
                             },
@@ -1146,8 +1199,15 @@ fn render_rows(
                 .border_color(theme.table_row_border)
                 // Row state background (dirty=yellow, error=red)
                 .when_some(row_bg, |d, bg| d.bg(bg))
+                // Keep the active cell's ring as the primary selection cue,
+                // while softly tinting the rest of its row for easier scanning.
+                // Explicit row-state colors (saving/error/insert/delete) retain
+                // priority so selection never hides meaningful status.
+                .when(row_bg.is_none() && is_active_row, |d| {
+                    d.bg(theme.table_active.opacity(0.45))
+                })
                 // Alternating row colors only when clean
-                .when(row_bg.is_none() && row_ix % 2 == 1, |d| {
+                .when(row_bg.is_none() && !is_active_row && row_ix % 2 == 1, |d| {
                     d.bg(theme.table_even)
                 })
                 .children(cells)

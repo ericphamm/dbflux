@@ -125,6 +125,20 @@ charts:
     error:
       create_editable_failed: "创建可编辑仪表盘失败：%{error}"
 components:
+  value_panel:
+    empty: 未选择单元格
+    error:
+      not_xml: 不是 XML 文档
+    read_only: 只读
+    revert: 还原
+    title: 值
+    wrap: 自动换行
+  data_table:
+    record:
+      empty: 没有可显示的行
+      name_header: 名称
+      position: "第 %{row} 行，共 %{total} 行"
+      value_header: 值
   json_editor:
     empty_error: 文档不能为空
     format: 格式化
@@ -982,6 +996,7 @@ document:
         set_null: 设为 NULL
         add_row: 添加行
         inspect_row: 检查行
+        view_value: 查看值
         duplicate_row: 复制行
         delete_row: 删除行
         chart_this_query: 将此查询制作成图表
@@ -1059,6 +1074,8 @@ document:
       loading: 加载中…
       empty: 暂无数据
       views:
+        grid: 网格
+        record: 记录
         table: 数据
         chart: 图表
         json: JSON
@@ -2583,6 +2600,9 @@ settings:
       results_duplicate_row: 复制行
       results_copy_row: 复制行
       results_copy_cell: 复制单元格
+      toggle_record_view: 切换记录视图
+      toggle_value_panel: 切换值面板
+      save_row: 保存行
       results_set_null: 将单元格设为 NULL
       open_context_menu: 打开上下文菜单
       menu_up: 菜单上移

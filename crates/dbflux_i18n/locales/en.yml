@@ -125,6 +125,20 @@ charts:
     error:
       create_editable_failed: "Failed to create editable dashboard: %{error}"
 components:
+  value_panel:
+    empty: No cell selected
+    error:
+      not_xml: Not an XML document
+    read_only: Read-only
+    revert: Revert
+    title: Value
+    wrap: Wrap
+  data_table:
+    record:
+      empty: No rows to show
+      name_header: Name
+      position: "Row %{row} of %{total}"
+      value_header: Value
   json_editor:
     empty_error: Document cannot be empty
     format: Format
@@ -1011,6 +1025,7 @@ document:
         set_null: Set to NULL
         add_row: Add Row
         inspect_row: Inspect Row
+        view_value: View Value
         duplicate_row: Duplicate Row
         delete_row: Delete Row
         chart_this_query: Chart this query
@@ -1088,6 +1103,8 @@ document:
       loading: Loading…
       empty: No data
       views:
+        grid: Grid
+        record: Record
         table: Data
         chart: Chart
         json: JSON
@@ -2693,6 +2710,9 @@ settings:
       results_duplicate_row: Duplicate Row
       results_copy_row: Copy Row
       results_copy_cell: Copy Cell
+      toggle_record_view: Toggle Record View
+      toggle_value_panel: Toggle Value Panel
+      save_row: Save Row
       results_set_null: Set Cell to NULL
       open_context_menu: Open Context Menu
       menu_up: Menu Up

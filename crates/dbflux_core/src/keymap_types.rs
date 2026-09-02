@@ -76,6 +76,9 @@ pub enum Command {
     ResultsDuplicateRow,
     ResultsCopyRow,
     ResultsCopyCell,
+    ToggleRecordView,
+    ToggleValuePanel,
+    SaveRow,
     ResultsSetNull,
     // Context menu
     OpenContextMenu,
@@ -225,6 +228,9 @@ impl Command {
             Command::ResultsDuplicateRow => "Duplicate Row",
             Command::ResultsCopyRow => "Copy Row",
             Command::ResultsCopyCell => "Copy Cell",
+            Command::ToggleRecordView => "Toggle Record View",
+            Command::ToggleValuePanel => "Toggle Value Panel",
+            Command::SaveRow => "Save Row",
             Command::ResultsSetNull => "Set Cell to NULL",
             Command::OpenContextMenu => "Open Context Menu",
             Command::MenuUp => "Menu Up",
@@ -328,6 +334,9 @@ impl Command {
             Command::ResultsDuplicateRow => "results_duplicate_row",
             Command::ResultsCopyRow => "results_copy_row",
             Command::ResultsCopyCell => "results_copy_cell",
+            Command::ToggleRecordView => "toggle_record_view",
+            Command::ToggleValuePanel => "toggle_value_panel",
+            Command::SaveRow => "save_row",
             Command::ResultsSetNull => "results_set_null",
             Command::OpenContextMenu => "open_context_menu",
             Command::MenuUp => "menu_up",
@@ -425,6 +434,9 @@ impl Command {
             Command::ResultsDuplicateRow,
             Command::ResultsCopyRow,
             Command::ResultsCopyCell,
+            Command::ToggleRecordView,
+            Command::ToggleValuePanel,
+            Command::SaveRow,
             Command::ResultsSetNull,
             Command::OpenContextMenu,
             Command::MenuUp,
@@ -523,6 +535,9 @@ impl Command {
             | Command::ResultsDuplicateRow
             | Command::ResultsCopyRow
             | Command::ResultsCopyCell
+            | Command::ToggleRecordView
+            | Command::ToggleValuePanel
+            | Command::SaveRow
             | Command::ResultsSetNull
             | Command::OpenContextMenu
             | Command::MenuUp

@@ -466,6 +466,25 @@ fn results_layer() -> KeymapLayer {
         KeyChord::new("y", Modifiers::none()),
         Command::ResultsCopyRow,
     );
+    layer.bind(
+        KeyChord::new("i", Modifiers::none()),
+        Command::ToggleRecordView,
+    );
+    layer.bind(
+        KeyChord::new("v", Modifiers::none()),
+        Command::ToggleValuePanel,
+    );
+
+    // Commit the edited row. Bound here rather than left to the DataTable's
+    // own `secondary-enter` action because that action needs the table to hold
+    // keyboard focus, and focus is lost whenever an inline editor closes.
+    // Cmd+S wins over the inherited Save (script) binding only while the
+    // results grid owns the keyboard, which is where it means "save the row".
+    layer.bind(KeyChord::new("s", Modifiers::primary()), Command::SaveRow);
+    layer.bind(
+        KeyChord::new("enter", Modifiers::primary()),
+        Command::SaveRow,
+    );
 
     // Copy selected cell(s) to clipboard — Cmd+C on macOS, Ctrl+C elsewhere.
     // GPUI reports cmd vs ctrl on separate modifier fields, so binding only
@@ -981,6 +1000,8 @@ mod tests {
             ('k', Command::SelectPrev),
             ('r', Command::Rename),
             ('o', Command::ResultsAddRow),
+            ('i', Command::ToggleRecordView),
+            ('v', Command::ToggleValuePanel),
             ('x', Command::Delete),
         ];
         for (letter, expected) in expectations {
@@ -1025,6 +1046,31 @@ mod tests {
             assert_eq!(keymap.resolve(ContextId::TextInput, &chord), None);
             assert_eq!(keymap.resolve(ContextId::Editor, &chord), None);
         }
+    }
+
+    /// In the results grid, Cmd+S and Cmd+Enter commit the edited row. The
+    /// grid's own binding must win over the inherited script Save, and only
+    /// there — an editor with focus still saves the script.
+    #[test]
+    fn results_layer_binds_save_row_without_shadowing_script_save() {
+        let keymap = default_keymap();
+
+        for chord in [
+            KeyChord::new("s", Modifiers::primary()),
+            KeyChord::new("enter", Modifiers::primary()),
+        ] {
+            assert_eq!(
+                keymap.resolve(ContextId::Results, &chord),
+                Some(Command::SaveRow),
+                "results grid must commit the row for {chord:?}"
+            );
+        }
+
+        assert_eq!(
+            keymap.resolve(ContextId::Editor, &KeyChord::new("s", Modifiers::primary())),
+            Some(Command::SaveQuery),
+            "the editor must keep saving the script"
+        );
     }
 
     /// Save must resolve while a text buffer owns the keyboard — the S3
