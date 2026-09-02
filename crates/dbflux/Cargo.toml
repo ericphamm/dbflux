@@ -77,3 +77,10 @@ dbflux_test_support.workspace = true
 # dbflux_ssh is an optional dep forwarded only to enable the vendored-openssl
 # feature on the ssh crate; no source-level use of dbflux_ssh is needed.
 ignored = ["tokio", "dbflux_ssh"]
+
+# The executable's own icon. Windows takes it from an embedded resource, not
+# from the installer, so without this dbflux.exe is generic in Explorer, on the
+# taskbar, and in the Open With dialog. `embed-resource` is already in the
+# graph as a Windows build dependency of gpui, so this adds no new crate.
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3"
