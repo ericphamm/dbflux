@@ -338,6 +338,11 @@ pub struct Workspace {
     workspace_inspector: Entity<inspector::WorkspaceInspector>,
     _workspace_inspector_subscription: Subscription,
 
+    /// Lets typing a table name jump to it in the sidebar. An interceptor,
+    /// not a key listener: the sidebar binds most bare letters, and a key
+    /// listener would only see the ones no binding claimed.
+    _sidebar_typeahead: Subscription,
+
     /// S8 modals — rendered as full-screen overlays via `Modal`.
     modal_delete_connection: Entity<crate::ui::overlays::modals::ModalDeleteConnection>,
     /// "Active query running" prompt shown before a disconnect or quit that
@@ -1455,6 +1460,31 @@ impl Workspace {
         let workspace_inspector =
             cx.new(|cx| inspector::WorkspaceInspector::new(initial_inspector_width, cx));
 
+        let sidebar_typeahead = {
+            let workspace = cx.entity().downgrade();
+            cx.intercept_keystrokes(move |event, _window, cx| {
+                let modifiers = event.keystroke.modifiers;
+                if modifiers.platform || modifiers.control || modifiers.alt {
+                    return;
+                }
+                let Some(typed) = event.keystroke.key_char.clone() else {
+                    return;
+                };
+                let Some(workspace) = workspace.upgrade() else {
+                    return;
+                };
+                let consumed = workspace.update(cx, |this, cx| {
+                    this.active_context(cx) == ContextId::Sidebar
+                        && this
+                            .sidebar
+                            .update(cx, |sidebar, cx| sidebar.typeahead_select(&typed, cx))
+                });
+                if consumed {
+                    cx.stop_propagation();
+                }
+            })
+        };
+
         let workspace_inspector_subscription = cx.subscribe(
             &workspace_inspector,
             |this, _, event: &inspector::WorkspaceInspectorEvent, cx| match event {
@@ -1646,6 +1676,7 @@ impl Workspace {
             tab_bar,
             workspace_inspector,
             _workspace_inspector_subscription: workspace_inspector_subscription,
+            _sidebar_typeahead: sidebar_typeahead,
             modal_delete_connection,
             modal_active_query,
             pending_active_query: None,
