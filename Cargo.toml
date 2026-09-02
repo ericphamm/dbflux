@@ -54,7 +54,7 @@ rust-version = "1.85"
 version = "0.8.0-dev.0"
 authors = ["Ignacio Perez <ignacio@feuer.me>"]
 description = "A fast, keyboard-first database client"
-repository = "https://github.com/0xErwin1/dbflux"
+repository = "https://github.com/ericphamm/dbflux"
 homepage = "https://dbflux.dev"
 documentation = "https://docs.dbflux.dev/"
 license = "MIT OR Apache-2.0"
@@ -134,6 +134,7 @@ image = { version = "0.25", default-features = false, features = [
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 quick-xml = "0.39"
+semver = "1"
 async-trait = "0.1"
 anyhow = "1"
 postcard = { version = "1", features = ["use-std"] }

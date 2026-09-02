@@ -47,7 +47,7 @@ use dbflux_components::tokens::{Heights, Radii, Spacing};
 #[cfg(test)]
 use dbflux_core::{CollectionRef, TableRef};
 use dbflux_core::{ExecutionContext, QueryLanguage};
-use dbflux_ui_base::toast::{Toast, ToastGlobal, ToastHost, copy_action, now_hms};
+use dbflux_ui_base::toast::{Toast, ToastAction, ToastGlobal, ToastHost, copy_action, now_hms};
 use dbflux_ui_sidebar::{Sidebar, SidebarEvent, SidebarTab};
 use dbflux_ui_windows::connection_manager::ConnectionManagerWindow;
 use gpui::prelude::FluentBuilder;
@@ -1510,7 +1510,93 @@ impl Workspace {
             }
         }
 
+        workspace.spawn_update_check(cx);
+
         workspace
+    }
+
+    /// Ask the release repository whether a newer version exists, once per
+    /// launch, and toast if it does.
+    ///
+    /// Deliberately fire-and-forget: an update notice must never delay startup
+    /// or surface as an error. A check that cannot complete — offline, GitHub
+    /// down, rate limited — is logged and nothing is shown, because "we could
+    /// not tell you about updates" is not information the user asked for.
+    fn spawn_update_check(&mut self, cx: &mut Context<Self>) {
+        let settings = self.app_state.read(cx).general_settings();
+        if !settings.check_for_updates {
+            return;
+        }
+        let skipped = settings.skipped_update_version.clone();
+
+        cx.spawn(async move |_workspace, cx| {
+            // Blocking HTTP, so it belongs on the background executor.
+            let outcome = cx
+                .background_executor()
+                .spawn(async move { dbflux_app::update_check::check_for_update(true, &skipped) })
+                .await;
+
+            match outcome {
+                Ok(Some(update)) => {
+                    if let Err(error) = cx.update(|cx| Self::push_update_toast(update, cx)) {
+                        log::debug!("update notice dropped, window gone: {error}");
+                    }
+                }
+                Ok(None) => {}
+                Err(error) => log::debug!("update check did not complete: {error}"),
+            }
+        })
+        .detach();
+    }
+
+    /// The update notice: a version, a link, and a way to mute this one.
+    ///
+    /// An `Info` toast carrying actions does not auto-dismiss, so it waits for
+    /// the user instead of vanishing after four seconds.
+    fn push_update_toast(update: dbflux_core::update_check::AvailableUpdate, cx: &mut App) {
+        let url = update.url.clone();
+        let details = ToastAction::new("update-details", dbflux_i18n::t!("update.action.details"))
+            .primary()
+            .on_click(move |cx: &mut App| cx.open_url(&url));
+
+        let version = update.version.clone();
+        let skip = ToastAction::new("update-skip", dbflux_i18n::t!("update.action.skip")).on_click(
+            move |cx: &mut App| {
+                // Reached through the global rather than a captured entity:
+                // the callback must be Send + Sync, which an Entity is not.
+                let Some(global) = cx.try_global::<AppStateGlobal>() else {
+                    return;
+                };
+                let app_state = global.entity.clone();
+
+                let runtime = app_state.read(cx).storage_runtime();
+                let mut settings = app_state.read(cx).general_settings().clone();
+                settings.skipped_update_version = version.clone();
+
+                if let Err(error) =
+                    dbflux_app::config_loader::save_general_settings(runtime, &settings)
+                {
+                    log::warn!("Failed to persist the skipped update version: {error}");
+                    return;
+                }
+
+                app_state.update(cx, |state, _cx| {
+                    state.update_general_settings(settings);
+                });
+            },
+        );
+
+        Toast::info(dbflux_i18n::t!(
+            "update.available.title",
+            version = update.version
+        ))
+        .body(dbflux_i18n::t!(
+            "update.available.body",
+            current = env!("CARGO_PKG_VERSION")
+        ))
+        .action(details)
+        .action(skip)
+        .push(cx);
     }
 
     fn default_commands() -> Vec<PaletteCommand> {

@@ -91,6 +91,8 @@ pub fn save_general_settings(
         object_preview_size_limit_mib: settings.object_preview_size_limit_mib as i64,
         language: settings.language.clone(),
         key_value_size_limit_mib: settings.key_value_size_limit_mib as i64,
+        check_for_updates: i64::from(settings.check_for_updates),
+        skipped_update_version: settings.skipped_update_version.clone(),
         updated_at: String::new(),
     };
     repo.upsert(&dto)?;
@@ -1067,6 +1069,8 @@ fn load_general_settings(
         object_preview_size_limit_mib: dto.object_preview_size_limit_mib as u64,
         language: language_setting_from_storage(&dto.language),
         key_value_size_limit_mib: dto.key_value_size_limit_mib as u64,
+        check_for_updates: dto.check_for_updates != 0,
+        skipped_update_version: dto.skipped_update_version.clone(),
     }
 }
 
@@ -2408,6 +2412,8 @@ mod tests {
             object_preview_size_limit_mib: 10,
             language: String::new(),
             key_value_size_limit_mib: 10,
+            check_for_updates: 1,
+            skipped_update_version: String::new(),
             updated_at: String::new(),
         };
 
@@ -2493,6 +2499,8 @@ mod tests {
             object_preview_size_limit_mib: 10,
             language: "de".to_string(),
             key_value_size_limit_mib: 10,
+            check_for_updates: 1,
+            skipped_update_version: String::new(),
             updated_at: String::new(),
         };
         runtime
@@ -2626,6 +2634,8 @@ mod tests {
             object_preview_size_limit_mib: 10,
             language: String::new(),
             key_value_size_limit_mib: 10,
+            check_for_updates: 1,
+            skipped_update_version: String::new(),
             updated_at: String::new(),
         };
         runtime

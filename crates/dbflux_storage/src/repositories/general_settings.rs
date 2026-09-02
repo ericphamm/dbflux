@@ -39,7 +39,8 @@ impl GeneralSettingsRepository {
                        dangerous_requires_where, dangerous_requires_preview,
                        style, schema_snapshot_retention,
                        object_preview_size_limit_mib, language,
-                       key_value_size_limit_mib, updated_at
+                       key_value_size_limit_mib, check_for_updates,
+                       skipped_update_version, updated_at
                 FROM cfg_general_settings WHERE id = 1
                 "#,
             )
@@ -70,7 +71,9 @@ impl GeneralSettingsRepository {
                 object_preview_size_limit_mib: row.get(17)?,
                 language: row.get(18)?,
                 key_value_size_limit_mib: row.get(19)?,
-                updated_at: row.get(20)?,
+                check_for_updates: row.get(20)?,
+                skipped_update_version: row.get(21)?,
+                updated_at: row.get(22)?,
             })
         });
 
@@ -98,8 +101,9 @@ impl GeneralSettingsRepository {
                     dangerous_requires_where, dangerous_requires_preview,
                     style, schema_snapshot_retention,
                     object_preview_size_limit_mib, language,
-                    key_value_size_limit_mib, updated_at
-                ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, datetime('now'))
+                    key_value_size_limit_mib, check_for_updates,
+                    skipped_update_version, updated_at
+                ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, datetime('now'))
                 ON CONFLICT(id) DO UPDATE SET
                     theme = excluded.theme,
                     restore_session_on_startup = excluded.restore_session_on_startup,
@@ -120,6 +124,8 @@ impl GeneralSettingsRepository {
                     object_preview_size_limit_mib = excluded.object_preview_size_limit_mib,
                     language = excluded.language,
                     key_value_size_limit_mib = excluded.key_value_size_limit_mib,
+                    check_for_updates = excluded.check_for_updates,
+                    skipped_update_version = excluded.skipped_update_version,
                     updated_at = datetime('now')
                 "#,
                 params![
@@ -142,6 +148,8 @@ impl GeneralSettingsRepository {
                     settings.object_preview_size_limit_mib,
                     settings.language,
                     settings.key_value_size_limit_mib,
+                    settings.check_for_updates,
+                    settings.skipped_update_version,
                 ],
             )
             .map_err(|source| StorageError::Sqlite {
@@ -188,6 +196,8 @@ pub struct GeneralSettingsDto {
     /// Largest key-value entry size (in MiB) whose bytes may be fetched for
     /// an in-app key-value preview.
     pub key_value_size_limit_mib: i64,
+    pub check_for_updates: i64,
+    pub skipped_update_version: String,
     pub updated_at: String,
 }
 
@@ -242,6 +252,8 @@ mod tests {
             object_preview_size_limit_mib: 25,
             language: String::new(),
             key_value_size_limit_mib: 10,
+            check_for_updates: 1,
+            skipped_update_version: String::new(),
             updated_at: String::new(),
         };
 
@@ -291,6 +303,8 @@ mod tests {
                 object_preview_size_limit_mib: 10,
                 language: String::new(),
                 key_value_size_limit_mib: 10,
+                check_for_updates: 1,
+                skipped_update_version: String::new(),
                 updated_at: String::new(),
             };
 
@@ -360,6 +374,8 @@ mod tests {
             object_preview_size_limit_mib: 10,
             language: "es".to_string(),
             key_value_size_limit_mib: 10,
+            check_for_updates: 1,
+            skipped_update_version: String::new(),
             updated_at: String::new(),
         };
 
@@ -438,6 +454,8 @@ mod tests {
             object_preview_size_limit_mib: 10,
             language: String::new(),
             key_value_size_limit_mib: 42,
+            check_for_updates: 1,
+            skipped_update_version: String::new(),
             updated_at: String::new(),
         };
 

@@ -2572,6 +2572,8 @@ settings:
       notice: Los cambios de idioma se aplican al reiniciar DBFlux.
     restore_session:
       label: Restaurar la sesión al iniciar
+    check_for_updates:
+      label: Buscar actualizaciones al iniciar
     reopen_connections:
       label: Reabrir las últimas conexiones
     default_focus:
@@ -3640,3 +3642,10 @@ workspace:
     delete_folder: '¿Eliminar la carpeta "%{name}"?'
     delete_connection: '¿Eliminar la conexión "%{name}"?'
   default_object_type: Objeto
+update:
+  action:
+    details: Detalles
+    skip: Omitir esta versión
+  available:
+    body: "Estás usando la %{current}."
+    title: "La versión %{version} está disponible"

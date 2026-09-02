@@ -17,6 +17,7 @@ pub mod release_channel;
 mod schema;
 mod sql;
 mod storage;
+pub mod update_check;
 pub mod values;
 
 pub use access::{AccessHandle, AccessKind, AccessManager};
