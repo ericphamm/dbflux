@@ -11,6 +11,9 @@ license.workspace = true
 [lib]
 
 [dependencies]
+# Update check only. rustls-tls matches the driver HTTP clients so the binary
+# does not end up with a second TLS stack.
+reqwest = { workspace = true, default-features = false, features = ["blocking", "json", "rustls-tls"] }
 dbflux_core.workspace = true
 dbflux_storage.workspace = true
 dbflux_ssh.workspace = true

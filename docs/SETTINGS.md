@@ -48,6 +48,7 @@ converted crate by crate and stays in English for now.
 |---------|---------|--------------|
 | **Restore session on startup** | On | Reopen the tabs you had open last time. |
 | **Reopen last connections** | Off | Reconnect to the connections that were active. |
+| **Check for updates on startup** | On | Ask the release repository once per launch whether a newer version exists, and show a dismissible notice if so. Off means no request is made. |
 | **Default focus** | Sidebar | Where focus lands on launch (Sidebar or the last tab). |
 | **Max history entries** | 1000 | Query-history cap (minimum 10). |
 | **Auto-save interval (ms)** | 2000 | How often editor buffers auto-save (minimum 500). |

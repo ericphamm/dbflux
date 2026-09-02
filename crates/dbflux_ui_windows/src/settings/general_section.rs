@@ -28,6 +28,7 @@ pub(super) enum GeneralFormRow {
     RequiresPreview,
     ObjectPreviewLimit,
     KeyValueSizeLimit,
+    CheckForUpdates,
     ShareStableDb,
     SaveButton,
 }

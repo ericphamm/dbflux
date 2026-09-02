@@ -2469,6 +2469,8 @@ settings:
       notice: 语言更改将在重启 DBFlux 后生效。
     restore_session:
       label: 启动时恢复会话
+    check_for_updates:
+      label: 启动时检查更新
     reopen_connections:
       label: 重新打开上次的连接
     default_focus:
@@ -3521,3 +3523,10 @@ workspace:
     delete_folder: "删除文件夹 %{name}？"
     delete_connection: "删除连接 %{name}？"
   default_object_type: 对象
+update:
+  action:
+    details: 详情
+    skip: 跳过此版本
+  available:
+    body: "当前运行 %{current}。"
+    title: "版本 %{version} 可用"

@@ -2572,6 +2572,8 @@ settings:
       notice: Language changes apply after restarting DBFlux.
     restore_session:
       label: Restore session on startup
+    check_for_updates:
+      label: Check for updates on startup
     reopen_connections:
       label: Reopen last connections
     default_focus:
@@ -3640,3 +3642,10 @@ workspace:
     delete_folder: 'Delete folder "%{name}"?'
     delete_connection: 'Delete connection "%{name}"?'
   default_object_type: Object
+update:
+  action:
+    details: Details
+    skip: Skip this version
+  available:
+    body: "You are running %{current}."
+    title: "Version %{version} is available"

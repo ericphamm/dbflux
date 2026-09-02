@@ -315,6 +315,17 @@ pub struct GeneralSettings {
     #[serde(default = "default_startup_focus")]
     pub default_focus_on_startup: StartupFocus,
 
+    /// Whether the app asks the release repository for a newer version once
+    /// per launch. Off means no network call is made at all.
+    #[serde(default = "default_true")]
+    pub check_for_updates: bool,
+
+    /// Version the user dismissed with "skip this version", without the
+    /// leading `v`. A release newer than this one is still announced, so
+    /// skipping once does not mute the check permanently.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub skipped_update_version: String,
+
     #[serde(default = "default_max_history_entries")]
     pub max_history_entries: usize,
 
@@ -382,6 +393,8 @@ impl Default for GeneralSettings {
             restore_session_on_startup: true,
             reopen_last_connections: false,
             default_focus_on_startup: StartupFocus::Sidebar,
+            check_for_updates: true,
+            skipped_update_version: String::new(),
             max_history_entries: 1000,
             auto_save_interval_ms: 2000,
 

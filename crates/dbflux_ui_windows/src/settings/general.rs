@@ -23,6 +23,7 @@ impl GeneralSection {
 
         if self.gen_settings.theme != saved.theme
             || self.gen_settings.style != saved.style
+            || self.gen_settings.check_for_updates != saved.check_for_updates
             || self.gen_settings.restore_session_on_startup != saved.restore_session_on_startup
             || self.gen_settings.reopen_last_connections != saved.reopen_last_connections
             || self.gen_settings.default_focus_on_startup != saved.default_focus_on_startup
@@ -86,6 +87,7 @@ impl GeneralSection {
             GeneralFormRow::RequiresPreview,
             GeneralFormRow::ObjectPreviewLimit,
             GeneralFormRow::KeyValueSizeLimit,
+            GeneralFormRow::CheckForUpdates,
         ];
 
         // The shared-database toggle only makes sense on nightly, which is the
@@ -167,6 +169,9 @@ impl GeneralSection {
                 self.dropdown_language
                     .update(cx, |dropdown, cx| dropdown.toggle_open(cx));
                 cx.notify();
+            }
+            Some(GeneralFormRow::CheckForUpdates) => {
+                self.gen_settings.check_for_updates = !self.gen_settings.check_for_updates;
             }
             Some(GeneralFormRow::RestoreSession) => {
                 self.gen_settings.restore_session_on_startup =
@@ -616,6 +621,15 @@ impl GeneralSection {
                     is_at(GeneralFormRow::ReopenConnections),
                     GeneralFormRow::ReopenConnections,
                     |this, value, _cx| this.gen_settings.reopen_last_connections = value,
+                    cx,
+                ))
+                .child(self.render_gen_checkbox(
+                    "check-for-updates",
+                    dbflux_i18n::t!("settings.general.check_for_updates.label"),
+                    self.gen_settings.check_for_updates,
+                    is_at(GeneralFormRow::CheckForUpdates),
+                    GeneralFormRow::CheckForUpdates,
+                    |this, value, _cx| this.gen_settings.check_for_updates = value,
                     cx,
                 ))
                 .child(self.render_gen_dropdown(

@@ -162,6 +162,26 @@ trust model.
 
 ---
 
+## Network activity
+
+DBFlux talks to the databases you configure, and to the cloud endpoints a
+driver needs (AWS, for example) when you use one. Beyond that there is exactly
+one request the application makes on its own:
+
+| What | When | What it sends |
+|------|------|---------------|
+| Update check | Once per launch | A `GET` to the release repository's GitHub API. GitHub sees your IP address and a user agent naming DBFlux and its version. |
+
+Nothing else is sent, and there is no telemetry, analytics, or crash reporting.
+The check reads the list of published releases and compares versions locally;
+it does not upload anything about your connections, queries, or data.
+
+Turn it off with **Settings → General → Check for updates on startup**. With it
+off, no request is made at all — the feature is not merely silenced.
+
+Nightly builds never check: they publish one rolling release, so the answer
+would be meaningless.
+
 ## Backup and reset
 
 DBFlux has no dedicated backup/restore command, but because everything lives in
