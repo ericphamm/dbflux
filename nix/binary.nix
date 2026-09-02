@@ -133,18 +133,18 @@ stdenv.mkDerivation {
       $out/share/applications/${appId}.desktop
 
     # Brand mark. The mark layout inside a published tarball varies by release:
-    # the channel packaging writes the active channel's mark to
-    # resources/branding/stable/mark.svg (the channel dir name is not preserved),
-    # and tarballs from before the branding split shipped resources/icons/dbflux.svg.
-    # Probe each known location and install the first that exists so the build
-    # never breaks on a layout this derivation did not author.
-    icon_dst=$out/share/icons/hicolor/scalable/apps/${appId}.svg
-    if [ -f resources/branding/${brandDir}/mark.svg ]; then
-      install -Dm644 resources/branding/${brandDir}/mark.svg "$icon_dst"
-    elif [ -f resources/branding/stable/mark.svg ]; then
-      install -Dm644 resources/branding/stable/mark.svg "$icon_dst"
-    elif [ -f resources/icons/dbflux.svg ]; then
-      install -Dm644 resources/icons/dbflux.svg "$icon_dst"
+    # the channel packaging writes the active channel's icon to
+    # resources/branding/stable/icon-512.png (the channel dir name is not
+    # preserved), and older tarballs shipped a vector at other paths. Probe each
+    # known location and install the first that exists so the build never breaks
+    # on a layout this derivation did not author.
+    icon_dst=$out/share/icons/hicolor/512x512/apps/${appId}.png
+    if [ -f resources/branding/${brandDir}/icon-512.png ]; then
+      install -Dm644 resources/branding/${brandDir}/icon-512.png "$icon_dst"
+    elif [ -f resources/branding/stable/icon-512.png ]; then
+      install -Dm644 resources/branding/stable/icon-512.png "$icon_dst"
+    elif [ -f resources/icons/dbflux.png ]; then
+      install -Dm644 resources/icons/dbflux.png "$icon_dst"
     else
       echo "dbflux: no brand mark found in the release tarball" >&2
       exit 1

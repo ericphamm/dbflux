@@ -102,7 +102,7 @@ let
       --replace '@APP_ID@' '${appId}'
 
     # Copy icon
-    install -Dm644 ${fullSrc}/resources/branding/${brandDir}/mark.svg $out/share/icons/hicolor/scalable/apps/${appId}.svg
+    install -Dm644 ${fullSrc}/resources/branding/${brandDir}/icon-512.png $out/share/icons/hicolor/512x512/apps/${appId}.png
 
     # Copy mime type
     install -Dm644 ${fullSrc}/resources/mime/dbflux-sql.xml $out/share/mime/packages/${appId}-sql.xml

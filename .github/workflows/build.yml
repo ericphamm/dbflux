@@ -140,7 +140,7 @@ jobs:
           cp target/${{ matrix.target }}/release/dbflux pkg/dbflux
           chmod +x pkg/dbflux
 
-          cp "$BRAND_DIR/mark.svg" pkg/resources/branding/stable/mark.svg
+          cp "$BRAND_DIR/icon-512.png" pkg/resources/branding/stable/icon-512.png
           cp resources/desktop/dbflux.desktop pkg/resources/desktop/
           cp resources/mime/dbflux-sql.xml pkg/resources/mime/
 
@@ -187,7 +187,7 @@ jobs:
 
           mkdir -p AppDir/usr/bin
           mkdir -p AppDir/usr/share/applications
-          mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+          mkdir -p AppDir/usr/share/icons/hicolor/512x512/apps
           mkdir -p AppDir/usr/share/mime/packages
           mkdir -p AppDir/usr/share/licenses/dbflux
 
@@ -197,7 +197,7 @@ jobs:
           cp resources/desktop/dbflux.desktop "AppDir/usr/share/applications/$APP_ID.desktop"
           sed -i -e "s|@EXEC_PATH@|dbflux|g" -e "s|@APP_NAME@|$APP_NAME|g" -e "s|@APP_ID@|$APP_ID|g" "AppDir/usr/share/applications/$APP_ID.desktop"
 
-          cp "$BRAND_DIR/mark.svg" "AppDir/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
+          cp "$BRAND_DIR/icon-512.png" "AppDir/usr/share/icons/hicolor/512x512/apps/$APP_ID.png"
 
           cp resources/mime/dbflux-sql.xml AppDir/usr/share/mime/packages/
           sed -i "s|@APP_ID@|$APP_ID|g" AppDir/usr/share/mime/packages/dbflux-sql.xml
@@ -207,7 +207,7 @@ jobs:
 
           ln -sf usr/bin/dbflux AppDir/AppRun
           ln -sf "usr/share/applications/$APP_ID.desktop" "AppDir/$APP_ID.desktop"
-          ln -sf "usr/share/icons/hicolor/scalable/apps/$APP_ID.svg" "AppDir/$APP_ID.svg"
+          ln -sf "usr/share/icons/hicolor/512x512/apps/$APP_ID.png" "AppDir/$APP_ID.png"
 
           APPIMAGE_EXTRACT_AND_RUN=1 VERSION="$VERSION" ./appimagetool-${{ env.APPIMAGE_ARCH }}.AppImage AppDir
 
@@ -219,24 +219,16 @@ jobs:
 
           mv "$APPIMAGE_FILE" dbflux-linux-${{ matrix.arch }}.AppImage
 
-      - name: Generate PNG icons
+      - name: Verify PNG icons
+        # The per-size icons are committed under packaging/icons rather than
+        # rasterised here: the artwork is a raster master, so downscaling it
+        # per build would only re-derive files that already exist, and each
+        # size is hand-checked for legibility at that pixel count.
         run: |
-          BRAND_DIR="resources/branding/${{ inputs.channel }}"
-          [ -d "$BRAND_DIR" ] || BRAND_DIR="resources/branding/stable"
-
-          mkdir -p packaging/icons/256x256/apps
-          mkdir -p packaging/icons/128x128/apps
-          mkdir -p packaging/icons/64x64/apps
-          mkdir -p packaging/icons/48x48/apps
-          mkdir -p packaging/icons/32x32/apps
-          mkdir -p packaging/icons/16x16/apps
-
-          convert "$BRAND_DIR/mark.svg" -resize 256x256 packaging/icons/256x256/apps/dbflux.png
-          convert "$BRAND_DIR/mark.svg" -resize 128x128 packaging/icons/128x128/apps/dbflux.png
-          convert "$BRAND_DIR/mark.svg" -resize 64x64 packaging/icons/64x64/apps/dbflux.png
-          convert "$BRAND_DIR/mark-small.svg" -resize 48x48 packaging/icons/48x48/apps/dbflux.png
-          convert "$BRAND_DIR/mark-small.svg" -resize 32x32 packaging/icons/32x32/apps/dbflux.png
-          convert "$BRAND_DIR/mark-small.svg" -resize 16x16 packaging/icons/16x16/apps/dbflux.png
+          for size in 16 24 32 48 64 128 256 512; do
+            icon="packaging/icons/${size}x${size}/apps/dbflux.png"
+            [ -f "$icon" ] || { echo "::error::Missing $icon"; exit 1; }
+          done
 
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
@@ -462,7 +454,10 @@ jobs:
           cp target/${{ matrix.target }}/release/dbflux "$APP_BUNDLE/Contents/MacOS/"
           chmod +x "$APP_BUNDLE/Contents/MacOS/dbflux"
 
-          cp "$BRAND_DIR/mark.svg" "$APP_BUNDLE/Contents/Resources/dbflux.svg"
+          # CFBundleIconFile in Info.plist names DBFlux, so the icns has to
+          # land as DBFlux.icns. Without it the bundle shows the generic
+          # application icon in the Dock and in Finder.
+          cp "$BRAND_DIR/icon.icns" "$APP_BUNDLE/Contents/Resources/DBFlux.icns"
 
           sed -e "s/\${VERSION}/$VERSION/g" -e "s/\${APP_NAME}/$APP_NAME/g" -e "s/\${BUNDLE_ID}/$BUNDLE_ID/g" resources/macos/Info.plist > "$APP_BUNDLE/Contents/Info.plist"
 
@@ -590,13 +585,7 @@ jobs:
           $BrandDir = "resources/branding/${{ inputs.channel }}"
           if (-Not (Test-Path $BrandDir)) { $BrandDir = "resources/branding/stable" }
 
-          magick convert -background none -resize 256x256 "$BrandDir/mark.svg" dbflux-256.png
-          magick convert -background none -resize 128x128 "$BrandDir/mark.svg" dbflux-128.png
-          magick convert -background none -resize 64x64 "$BrandDir/mark.svg" dbflux-64.png
-          magick convert -background none -resize 48x48 "$BrandDir/mark-small.svg" dbflux-48.png
-          magick convert -background none -resize 32x32 "$BrandDir/mark-small.svg" dbflux-32.png
-          magick convert -background none -resize 16x16 "$BrandDir/mark-small.svg" dbflux-16.png
-          magick convert dbflux-16.png dbflux-32.png dbflux-48.png dbflux-64.png dbflux-128.png dbflux-256.png dbflux.ico
+          Copy-Item "$BrandDir/icon.ico" dbflux.ico
 
       - name: Create portable package
         run: |
