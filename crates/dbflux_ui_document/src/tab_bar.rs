@@ -31,6 +31,29 @@ pub const TAB_MENU_WIDTH: Pixels = px(220.0);
 /// Space kept between the menu and the window edge.
 const TAB_MENU_EDGE_GAP: Pixels = Spacing::SM;
 
+/// Narrowest a tab may get. Tabs never shrink past this, however many are
+/// open — the strip scrolls instead, because a row of four-letter stumps
+/// tells the user nothing about which table each tab holds.
+const TAB_MIN_WIDTH: Pixels = px(140.0);
+
+/// Widest an inactive tab gets before its title is ellipsized.
+const TAB_MAX_WIDTH: Pixels = px(220.0);
+
+/// Widest the active tab gets. Larger than the rest so the table you are
+/// actually looking at shows its whole name.
+const TAB_ACTIVE_MAX_WIDTH: Pixels = px(360.0);
+
+/// Title for the application window: the active document, the database it
+/// belongs to, then the product name — the order DBeaver and DbGate use, so
+/// the part that changes is the part the window list shows first.
+pub fn window_title(document: Option<(&str, Option<&str>)>, product: &str) -> String {
+    match document {
+        Some((title, Some(group))) => format!("{title} - {group} - {product}"),
+        Some((title, None)) => format!("{title} - {product}"),
+        None => product.to_string(),
+    }
+}
+
 /// Left edge for the tab context menu opened at `click_x`.
 ///
 /// Anchored at the click, pulled left when the menu would otherwise run past
@@ -529,8 +552,16 @@ impl TabBar {
             .id(ElementId::Name(format!("tab-{}", id.0).into()))
             .relative()
             .h_full()
-            .min_w(px(100.0))
-            .max_w(px(200.0))
+            .min_w(TAB_MIN_WIDTH)
+            .max_w(if is_active {
+                TAB_ACTIVE_MAX_WIDTH
+            } else {
+                TAB_MAX_WIDTH
+            })
+            // Without this the row of tabs divides the available width between
+            // itself and ignores the minimum, which is what turned a dozen
+            // open tables into a row of stumps.
+            .flex_shrink_0()
             .flex()
             .flex_col()
             .cursor_pointer()
@@ -674,6 +705,23 @@ mod group_band_tests {
             clamp_tab_menu_left(px(80.0), px(220.0), px(200.0)),
             TAB_MENU_EDGE_GAP
         );
+    }
+
+    #[test]
+    fn window_title_leads_with_the_document_then_its_database() {
+        assert_eq!(
+            super::window_title(Some(("flags", Some("monixa-test"))), "DBFlux"),
+            "flags - monixa-test - DBFlux"
+        );
+    }
+
+    #[test]
+    fn window_title_falls_back_to_the_product_alone() {
+        assert_eq!(
+            super::window_title(Some(("query.sql", None)), "DBFlux"),
+            "query.sql - DBFlux"
+        );
+        assert_eq!(super::window_title(None, "DBFlux"), "DBFlux");
     }
 
     #[test]

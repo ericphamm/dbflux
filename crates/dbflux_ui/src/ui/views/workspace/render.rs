@@ -43,6 +43,8 @@ fn empty_state_shortcut<const N: usize>(
 
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.sync_window_title(window, cx);
+
         if let Some(command_id) = self.pending_command.take() {
             self.handle_command(command_id, window, cx);
             self.focus_handle.focus(window);

@@ -351,6 +351,9 @@ pub struct Workspace {
 
     tab_manager: Entity<TabManager>,
     tab_bar: Entity<TabBar>,
+    /// Last title handed to the platform window, so render only calls into
+    /// the window manager when the active document actually changed.
+    window_title: String,
 
     workspace_inspector: Entity<inspector::WorkspaceInspector>,
     _workspace_inspector_subscription: Subscription,
@@ -1449,6 +1452,7 @@ impl Workspace {
             shutdown_overlay,
             tab_manager,
             tab_bar,
+            window_title: String::new(),
             workspace_inspector,
             _workspace_inspector_subscription: workspace_inspector_subscription,
             #[cfg(feature = "mcp")]
@@ -2071,6 +2075,33 @@ impl Workspace {
                 palette.hide(cx);
             });
             self.set_focus(self.focus_target, window, cx);
+        }
+    }
+
+    /// Name the window after the active document, the way DBeaver and DbGate
+    /// do, so the table being looked at is visible in the window list and the
+    /// app switcher rather than only inside the app.
+    ///
+    /// Called from render because a document's title can change without an
+    /// event of its own (a query tab is named after the file it is saved to).
+    /// The platform call is skipped unless the text actually changed.
+    fn sync_window_title(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let active = self
+            .tab_manager
+            .read(cx)
+            .active_tab()
+            .map(|tab| tab.meta_snapshot(cx));
+
+        let title = crate::ui::document::tab_bar::window_title(
+            active
+                .as_ref()
+                .map(|meta| (meta.title.as_str(), meta.group.as_deref())),
+            dbflux_core::ReleaseChannel::current().display_name(),
+        );
+
+        if title != self.window_title {
+            window.set_window_title(&title);
+            self.window_title = title;
         }
     }
 
