@@ -543,6 +543,8 @@ así la escritura funciona con normalidad.)
 | `r`                                           | Renombrar / editar                         |
 | `o`                                           | Añadir fila                                |
 | `y`                                           | Copiar fila                                |
+| `Tab`                                         | Alternar la vista de registro (una fila)   |
+| `v`                                           | Alternar el panel de valor de la celda     |
 | `Ctrl+c` / `Cmd+c`                            | Copiar celda(s)                            |
 | `z`                                           | Alternar colapso del panel                 |
 | `m` (o `Shift+F10`)                           | Abrir menú contextual                      |

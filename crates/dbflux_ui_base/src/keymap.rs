@@ -476,8 +476,11 @@ fn results_layer() -> KeymapLayer {
         KeyChord::new("y", Modifiers::none()),
         Command::ResultsCopyRow,
     );
+    // Tab, not `i`: the record view is how a single row is inspected, and
+    // Tab is the key that reads as "show me this one". It shadows the global
+    // focus cycle while the grid has focus.
     layer.bind(
-        KeyChord::new("i", Modifiers::none()),
+        KeyChord::new("tab", Modifiers::none()),
         Command::ToggleRecordView,
     );
     layer.bind(
@@ -1040,7 +1043,6 @@ mod tests {
             ('k', Command::SelectPrev),
             ('r', Command::Rename),
             ('o', Command::ResultsAddRow),
-            ('i', Command::ToggleRecordView),
             ('v', Command::ToggleValuePanel),
             ('x', Command::Delete),
         ];
@@ -1061,6 +1063,18 @@ mod tests {
     #[test]
     fn results_layer_binds_space_to_expand_collapse() {
         let keymap = default_keymap();
+        let tab = KeyChord::new("tab", Modifiers::none());
+        assert_eq!(
+            keymap.resolve(ContextId::Results, &tab),
+            Some(Command::ToggleRecordView),
+            "Tab inspects the current row in the grid"
+        );
+        assert_eq!(
+            keymap.resolve(ContextId::Editor, &tab),
+            Some(Command::CycleFocusForward),
+            "elsewhere Tab still cycles focus"
+        );
+
         let chord = KeyChord::new("space", Modifiers::none());
         assert_eq!(
             keymap.resolve(ContextId::Results, &chord),

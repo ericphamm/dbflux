@@ -32,6 +32,33 @@ enum FilterBackend {
     Mongo,
 }
 
+/// The Filter submenu, in the order it is rendered: operators for the cell
+/// under the cursor, then the same operators with the value left to the user,
+/// then the IS NULL pair, then "Remove filter".
+///
+/// The group sizes travel with the items because the renderer needs them to
+/// place the headings and separators, and keyboard navigation needs the total.
+#[derive(Default)]
+pub(super) struct FilterMenu {
+    #[allow(dead_code)]
+    pub column: String,
+    pub items: Vec<(String, ContextMenuAction)>,
+    pub value_ops: usize,
+    pub custom_ops: usize,
+}
+
+impl FilterMenu {
+    /// Index of the first "type your own value" entry.
+    pub fn custom_start(&self) -> usize {
+        self.value_ops
+    }
+
+    /// Index of the first IS NULL entry.
+    pub fn null_start(&self) -> usize {
+        self.value_ops + self.custom_ops
+    }
+}
+
 impl DataGridPanel {
     fn restore_focus_after_context_menu(
         &mut self,
@@ -434,19 +461,27 @@ impl DataGridPanel {
         menu: &TableContextMenu,
         backend: Option<FilterBackend>,
         cx: &App,
-    ) -> (String, usize, Vec<(String, ContextMenuAction)>, usize) {
+    ) -> FilterMenu {
         match backend {
             Some(FilterBackend::Sql) => self.build_sql_filter_items(menu, cx),
             Some(FilterBackend::Mongo) => self.build_mongo_filter_items(cx),
-            None => (String::new(), 0, Vec::new(), 0),
+            None => FilterMenu::default(),
         }
     }
 
-    fn build_sql_filter_items(
-        &self,
-        menu: &TableContextMenu,
-        cx: &App,
-    ) -> (String, usize, Vec<(String, ContextMenuAction)>, usize) {
+    /// Operators offered for a filter the user types the value for.
+    ///
+    /// Fixed rather than derived from the cell, because the point of these
+    /// entries is to filter by a value that is not in the grid — the cell may
+    /// even be NULL.
+    const CUSTOM_FILTER_OPERATORS: [FilterOperator; 4] = [
+        FilterOperator::Eq,
+        FilterOperator::NotEq,
+        FilterOperator::Gt,
+        FilterOperator::Lt,
+    ];
+
+    fn build_sql_filter_items(&self, menu: &TableContextMenu, cx: &App) -> FilterMenu {
         let (col_name, col_type_name) = self
             .result
             .columns
@@ -478,6 +513,18 @@ impl DataGridPanel {
             }
         }
 
+        // Same operators with the value left blank: the filter box gets
+        // `column =` and the keyboard, so a value that is not in the grid can
+        // be filtered on without writing the whole expression.
+        let custom_ops_count = Self::CUSTOM_FILTER_OPERATORS.len();
+        for operator in Self::CUSTOM_FILTER_OPERATORS {
+            let op = Self::sql_operator_symbol(operator);
+            items.push((
+                format!("{} {} ..", col_name, op),
+                ContextMenuAction::FilterCustom(operator),
+            ));
+        }
+
         items.push((
             format!("{} IS NULL", col_name),
             ContextMenuAction::FilterIsNull,
@@ -488,16 +535,17 @@ impl DataGridPanel {
         ));
         items.push(("Remove filter".to_string(), ContextMenuAction::RemoveFilter));
 
-        let count = items.len();
-        (col_name, count, items, value_ops_count)
+        FilterMenu {
+            column: col_name,
+            items,
+            value_ops: value_ops_count,
+            custom_ops: custom_ops_count,
+        }
     }
 
-    fn build_mongo_filter_items(
-        &self,
-        cx: &App,
-    ) -> (String, usize, Vec<(String, ContextMenuAction)>, usize) {
+    fn build_mongo_filter_items(&self, cx: &App) -> FilterMenu {
         let Some((field, ref val)) = self.mongo_filter_field_info(cx) else {
-            return (String::new(), 0, Vec::new(), 0);
+            return FilterMenu::default();
         };
 
         let display = Self::mongo_value_display_preview(val);
@@ -525,8 +573,14 @@ impl DataGridPanel {
         ));
         items.push(("Remove filter".to_string(), ContextMenuAction::RemoveFilter));
 
-        let count = items.len();
-        (field, count, items, value_ops_count)
+        FilterMenu {
+            column: field,
+            items,
+            value_ops: value_ops_count,
+            // The Mongo filter box takes a query document, so a half-written
+            // `field =` would not parse.
+            custom_ops: 0,
+        }
     }
 
     /// Returns true if the data grid is editable (has primary key info).
@@ -702,7 +756,7 @@ impl DataGridPanel {
             .as_ref()
             .filter(|m| m.filter_submenu_open)
             .map(|m| {
-                let (_, _, items, _) = self.build_filter_items(m, backend, cx);
+                let items = self.build_filter_items(m, backend, cx).items;
                 items.into_iter().map(|(_, action)| action).collect()
             })
             .unwrap_or_default();
@@ -929,7 +983,7 @@ impl DataGridPanel {
         let Some(menu) = self.context_menu.as_ref() else {
             return false;
         };
-        let (_, _, filter_items, _) = self.build_filter_items(menu, backend, cx);
+        let filter_items = self.build_filter_items(menu, backend, cx).items;
         let mut actions = vec![
             ContextMenuAction::Order(dbflux_core::SortDirection::Ascending),
             ContextMenuAction::Order(dbflux_core::SortDirection::Descending),
@@ -1555,6 +1609,9 @@ impl DataGridPanel {
                     self.handle_filter_by_value(menu.row, menu.col, op, window, cx);
                 }
             },
+            ContextMenuAction::FilterCustom(op) => {
+                self.handle_filter_custom(menu.col, op, window, cx);
+            }
             ContextMenuAction::FilterIsNull => match backend {
                 Some(FilterBackend::Mongo) => {
                     self.handle_mongo_filter_null(&menu.doc_field_path, false, window, cx);
@@ -2890,6 +2947,52 @@ impl DataGridPanel {
         };
 
         self.apply_filter_expression(&expr, window, cx);
+    }
+
+    /// Put `column <operator>` in the filter box and hand over the keyboard.
+    ///
+    /// Deliberately does not refresh: the expression is incomplete until the
+    /// user types a value and presses Enter.
+    fn handle_filter_custom(
+        &mut self,
+        col: usize,
+        operator: FilterOperator,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let profile_id = match &self.source {
+            DataSource::Table { profile_id, .. } => *profile_id,
+            _ => return,
+        };
+
+        let conn = self
+            .app_state
+            .read(cx)
+            .connections()
+            .get(&profile_id)
+            .map(|c| c.connection.clone());
+
+        let Some(conn) = conn else { return };
+        let dialect = conn.dialect();
+
+        let col_name = match self.result.columns.get(col) {
+            Some(c) => dialect.quote_identifier(&c.name),
+            None => return,
+        };
+
+        let expr = format!("{} {} ", col_name, Self::sql_operator_symbol(operator));
+        let current = self.filter_bar.filter_input.read(cx).value().to_string();
+        let staged = if current.trim().is_empty() {
+            expr
+        } else {
+            format!("({}) AND {}", current.trim(), expr)
+        };
+
+        self.filter_bar.filter_input.update(cx, |state, cx| {
+            state.set_value(&staged, window, cx);
+            state.focus(window, cx);
+        });
+        cx.notify();
     }
 
     fn handle_filter_is_null(

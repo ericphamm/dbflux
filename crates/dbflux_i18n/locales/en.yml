@@ -1046,6 +1046,7 @@ document:
       filter:
         title: Filter
         cell_value: Cell value
+        custom: Custom
       order:
         title: Order
         remove: Remove ordering

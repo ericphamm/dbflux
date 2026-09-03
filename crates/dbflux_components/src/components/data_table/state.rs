@@ -70,6 +70,14 @@ pub struct DataTableState {
     /// Input state for the inline cell editor.
     cell_input: Option<Entity<InputState>>,
 
+    /// The text the open editor was seeded with.
+    ///
+    /// Committing compares against this rather than against the cell's
+    /// rendered text: a NULL cell renders as `NULL` but opens an empty
+    /// editor, so comparing with what is on screen made merely opening such a
+    /// cell and clicking away look like an edit from NULL to the empty string.
+    editing_seed: Option<String>,
+
     /// Dropdown for editing enum/set columns inline.
     enum_dropdown: Option<Entity<Dropdown>>,
 
@@ -143,6 +151,7 @@ impl DataTableState {
             horizontal_offset: px(0.0),
             editing_cell: None,
             cell_input: None,
+            editing_seed: None,
             enum_dropdown: None,
             _editing_subs: Vec::new(),
             edit_buffer,
@@ -864,6 +873,7 @@ impl DataTableState {
 
         self.editing_cell = Some(coord);
         self.cell_input = Some(input);
+        self.editing_seed = Some(initial_value);
         self.enum_dropdown = None;
         self.scroll_to_cell(coord.row, coord.col);
         cx.notify();
@@ -957,26 +967,26 @@ impl DataTableState {
         };
 
         self.enum_dropdown = None;
+        let seed = self.editing_seed.take();
 
         if apply {
             if let Some(input) = self.cell_input.take() {
                 let value_str = input.read(cx).value().to_string();
+
+                // Untouched editor: nothing to record. Without this an
+                // accidental double-click would mark the row dirty.
+                if seed.as_deref() == Some(value_str.as_str()) {
+                    cx.notify();
+                    return;
+                }
 
                 // Translate visual row to source
                 let visual_order = self.edit_buffer.compute_visual_order();
 
                 match visual_order.get(coord.row).copied() {
                     Some(VisualRowSource::Base(base_idx)) => {
-                        let original = self
-                            .model
-                            .cell(base_idx, coord.col)
-                            .map(|c| c.display_text().to_string())
-                            .unwrap_or_default();
-
-                        if value_str != original {
-                            let cell_value = super::model::CellValue::text(&value_str);
-                            self.edit_buffer.set_cell(base_idx, coord.col, cell_value);
-                        }
+                        let cell_value = super::model::CellValue::text(&value_str);
+                        self.edit_buffer.set_cell(base_idx, coord.col, cell_value);
                     }
                     Some(VisualRowSource::Insert(insert_idx)) => {
                         // Apply to pending insert (with undo support)

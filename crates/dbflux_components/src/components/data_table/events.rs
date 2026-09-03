@@ -98,6 +98,10 @@ pub enum ContextMenuAction {
     CopyAsDelete,
     /// Filter by cell value with an operator.
     FilterByValue(FilterOperator),
+    /// Put `column <operator>` in the filter box and let the user type the
+    /// value, for filtering by something other than the cell under the
+    /// cursor.
+    FilterCustom(FilterOperator),
     /// Filter: column IS NULL.
     FilterIsNull,
     /// Filter: column IS NOT NULL.

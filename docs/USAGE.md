@@ -505,6 +505,8 @@ stay `Ctrl` on all platforms (to avoid clashing with macOS system shortcuts).
 | `r` | Rename / edit |
 | `o` | Add row |
 | `y` | Copy row |
+| `Tab` | Toggle the record view (one row, field per line) |
+| `v` | Toggle the value panel for the selected cell |
 | `Ctrl+c` / `Cmd+c` | Copy cell(s) |
 | `z` | Toggle panel collapse |
 | `m` (or `Shift+F10`) | Open context menu |

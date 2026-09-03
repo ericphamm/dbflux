@@ -1017,6 +1017,7 @@ document:
       filter:
         title: 筛选
         cell_value: 单元格值
+        custom: 自定义
       order:
         title: 排序
         remove: 移除排序

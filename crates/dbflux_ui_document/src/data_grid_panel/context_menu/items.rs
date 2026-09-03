@@ -1,8 +1,54 @@
 use super::ContextMenuItem;
+use dbflux_app::keymap::{Command, ContextId};
 use dbflux_components::components::data_table::ContextMenuAction;
 use dbflux_components::icons::AppIcon;
+use gpui::SharedString;
+
+/// The keyboard shortcut for a menu action, or `None` when the action has no
+/// binding in the results grid.
+///
+/// Read from the keymap rather than spelled out here, so a rebinding cannot
+/// leave the menu advertising a key that no longer works.
+fn action_shortcut(action: ContextMenuAction) -> Option<SharedString> {
+    let command = match action {
+        ContextMenuAction::Copy => Command::ResultsCopyCell,
+        ContextMenuAction::ViewValue => Command::ToggleValuePanel,
+        ContextMenuAction::Edit => Command::Rename,
+        ContextMenuAction::AddRow => Command::ResultsAddRow,
+        ContextMenuAction::DeleteRow => Command::Delete,
+        _ => return None,
+    };
+
+    dbflux_ui_base::keymap::default_keymap()
+        .shortcut_for_command(ContextId::Results, command)
+        .map(SharedString::from)
+}
 
 pub(super) fn build_context_menu_items(
+    is_editable: bool,
+    is_document_view: bool,
+    has_row_target: bool,
+    can_chart: bool,
+    inspect_row_enabled: bool,
+) -> Vec<ContextMenuItem> {
+    let mut items = build_menu_items(
+        is_editable,
+        is_document_view,
+        has_row_target,
+        can_chart,
+        inspect_row_enabled,
+    );
+
+    for item in &mut items {
+        if let Some(action) = item.action {
+            item.shortcut = action_shortcut(action);
+        }
+    }
+
+    items
+}
+
+fn build_menu_items(
     is_editable: bool,
     is_document_view: bool,
     has_row_target: bool,
@@ -20,6 +66,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Layers),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: dbflux_i18n::t!("document.data.context_menu.item.view_document").into(),
@@ -27,6 +74,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Maximize2),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
             ]);
         }
@@ -39,6 +87,7 @@ pub(super) fn build_context_menu_items(
                     icon: None,
                     is_separator: true,
                     is_danger: false,
+                    shortcut: None,
                 });
             }
 
@@ -48,6 +97,7 @@ pub(super) fn build_context_menu_items(
                 icon: Some(AppIcon::Plus),
                 is_separator: false,
                 is_danger: false,
+                shortcut: None,
             });
 
             if has_row_target {
@@ -61,6 +111,7 @@ pub(super) fn build_context_menu_items(
                         icon: Some(AppIcon::Layers),
                         is_separator: false,
                         is_danger: false,
+                        shortcut: None,
                     },
                     ContextMenuItem {
                         label: dbflux_i18n::t!("document.data.context_menu.item.delete_document")
@@ -69,6 +120,7 @@ pub(super) fn build_context_menu_items(
                         icon: Some(AppIcon::Delete),
                         is_separator: false,
                         is_danger: true,
+                        shortcut: None,
                     },
                 ]);
             }
@@ -83,6 +135,7 @@ pub(super) fn build_context_menu_items(
         icon: Some(AppIcon::Layers),
         is_separator: false,
         is_danger: false,
+        shortcut: None,
     }];
 
     // Offered for read-only results too — the panel is how a long JSON or XML
@@ -95,6 +148,7 @@ pub(super) fn build_context_menu_items(
             icon: Some(AppIcon::Maximize2),
             is_separator: false,
             is_danger: false,
+            shortcut: None,
         });
     }
 
@@ -107,6 +161,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Download),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: dbflux_i18n::t!("document.data.context_menu.item.edit").into(),
@@ -114,6 +169,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Pencil),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: dbflux_i18n::t!("document.data.context_menu.item.edit_in_modal").into(),
@@ -121,6 +177,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Maximize2),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: "".into(),
@@ -128,6 +185,7 @@ pub(super) fn build_context_menu_items(
                     icon: None,
                     is_separator: true,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: dbflux_i18n::t!("document.data.context_menu.item.set_default").into(),
@@ -135,6 +193,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::RotateCcw),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: dbflux_i18n::t!("document.data.context_menu.item.set_null").into(),
@@ -142,6 +201,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::X),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: "".into(),
@@ -149,6 +209,7 @@ pub(super) fn build_context_menu_items(
                     icon: None,
                     is_separator: true,
                     is_danger: false,
+                    shortcut: None,
                 },
             ]);
         }
@@ -159,6 +220,7 @@ pub(super) fn build_context_menu_items(
             icon: Some(AppIcon::Plus),
             is_separator: false,
             is_danger: false,
+            shortcut: None,
         });
 
         if has_row_target {
@@ -169,6 +231,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Info),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 });
             }
 
@@ -179,6 +242,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Layers),
                     is_separator: false,
                     is_danger: false,
+                    shortcut: None,
                 },
                 ContextMenuItem {
                     label: dbflux_i18n::t!("document.data.context_menu.item.delete_row").into(),
@@ -186,6 +250,7 @@ pub(super) fn build_context_menu_items(
                     icon: Some(AppIcon::Delete),
                     is_separator: false,
                     is_danger: true,
+                    shortcut: None,
                 },
             ]);
         }
@@ -198,6 +263,7 @@ pub(super) fn build_context_menu_items(
             icon: None,
             is_separator: true,
             is_danger: false,
+            shortcut: None,
         });
         items.push(ContextMenuItem {
             label: dbflux_i18n::t!("document.data.context_menu.item.chart_this_query").into(),
@@ -205,6 +271,7 @@ pub(super) fn build_context_menu_items(
             icon: Some(AppIcon::ChartSpline),
             is_separator: false,
             is_danger: false,
+            shortcut: None,
         });
     }
 

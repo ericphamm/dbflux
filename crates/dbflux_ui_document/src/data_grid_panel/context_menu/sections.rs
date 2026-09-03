@@ -4,6 +4,7 @@ use dbflux_components::components::data_table::ContextMenuAction;
 use dbflux_components::icons::AppIcon;
 use dbflux_components::primitives::{Icon, Text, surface_raised};
 use dbflux_components::tokens::{FontSizes, Heights, Radii, Spacing};
+use dbflux_components::typography::MonoCaption;
 use gpui::prelude::FluentBuilder;
 use gpui::{deferred, *};
 
@@ -27,7 +28,10 @@ impl DataGridPanel {
         let remove_ordering = dbflux_i18n::t!("document.data.context_menu.order.remove");
         let order_title = dbflux_i18n::t!("document.data.context_menu.order.title");
         let filter_title = dbflux_i18n::t!("document.data.context_menu.filter.title");
-        let (_, _, filter_items, value_ops_count) = self.build_filter_items(menu, backend, cx);
+        let filter_menu = self.build_filter_items(menu, backend, cx);
+        let custom_start = filter_menu.custom_start();
+        let null_start = filter_menu.null_start();
+        let filter_items = filter_menu.items;
 
         let mut rows: Vec<AnyElement> = Vec::new();
         rows.push(
@@ -96,7 +100,8 @@ impl DataGridPanel {
 
         let remove_filter_index = filter_items.len().saturating_sub(1);
         for (idx, (label, action)) in filter_items.into_iter().enumerate() {
-            if (value_ops_count > 0 && idx == value_ops_count) || idx == remove_filter_index {
+            let starts_group = (idx == custom_start && idx > 0) || idx == null_start;
+            if starts_group || idx == remove_filter_index {
                 rows.push(Self::column_menu_separator(theme));
             }
             let is_danger = matches!(action, ContextMenuAction::RemoveFilter);
@@ -217,6 +222,7 @@ impl DataGridPanel {
             let is_danger = item.is_danger;
             let label = item.label.clone();
             let icon = item.icon;
+            let shortcut = item.shortcut.clone();
             let current_index = *visual_index;
 
             let label_color = if is_danger {
@@ -283,6 +289,16 @@ impl DataGridPanel {
                     } else {
                         label_color
                     }))
+                    // Pushes the shortcut to the right edge and keeps the
+                    // label left-aligned when there is none.
+                    .child(div().flex_1())
+                    .when_some(shortcut, |d, shortcut| {
+                        d.child(MonoCaption::new(shortcut).color(if is_selected {
+                            theme.accent_foreground
+                        } else {
+                            theme.muted_foreground
+                        }))
+                    })
                     .into_any_element(),
             );
 
@@ -325,11 +341,11 @@ impl DataGridPanel {
         let filter_selected = selected_index == filter_index;
         let submenu_selected_index = menu.submenu_selected_index;
 
-        let (_col_name_display, filter_submenu_count, filter_items, value_ops_count) =
-            self.build_filter_items(menu, backend, cx);
+        let filter_menu = self.build_filter_items(menu, backend, cx);
 
         let filter_title = dbflux_i18n::t!("document.data.context_menu.filter.title");
         let cell_value_label = dbflux_i18n::t!("document.data.context_menu.filter.cell_value");
+        let custom_label = dbflux_i18n::t!("document.data.context_menu.filter.custom");
 
         let filter_label_color = if filter_selected && !filter_submenu_open {
             theme.accent_foreground
@@ -397,11 +413,10 @@ impl DataGridPanel {
                 ))
                 .when(filter_submenu_open, |d: Stateful<Div>| {
                     d.child(Self::build_filter_submenu_flyout(
-                        filter_items,
-                        value_ops_count,
-                        filter_submenu_count,
+                        filter_menu,
                         submenu_selected_index,
                         cell_value_label,
+                        custom_label,
                         theme,
                         cx,
                     ))
@@ -414,11 +429,10 @@ impl DataGridPanel {
     /// Builds the absolute-positioned flyout listing filter operators for the
     /// current cell value plus the "Remove filter" action.
     fn build_filter_submenu_flyout(
-        filter_items: Vec<(String, ContextMenuAction)>,
-        value_ops_count: usize,
-        filter_submenu_count: usize,
+        filter_menu: super::FilterMenu,
         submenu_selected_index: usize,
         cell_value_label: String,
+        custom_label: String,
         theme: &gpui_component::theme::Theme,
         cx: &mut Context<Self>,
     ) -> Div {
@@ -427,8 +441,12 @@ impl DataGridPanel {
         let submenu_fg = theme.foreground;
         let submenu_hover = theme.secondary;
 
-        let value_section_separator_idx = (value_ops_count > 0).then_some(value_ops_count);
-        let remove_separator_idx = filter_submenu_count.saturating_sub(1);
+        let value_ops_count = filter_menu.value_ops;
+        let custom_start = filter_menu.custom_start();
+        let has_custom = filter_menu.custom_ops > 0;
+        let null_start = filter_menu.null_start();
+        let filter_items = filter_menu.items;
+        let remove_separator_idx = filter_items.len().saturating_sub(1);
 
         div()
             .absolute()
@@ -460,8 +478,32 @@ impl DataGridPanel {
                     .flat_map(|(idx, (label, action))| {
                         let mut elements: Vec<AnyElement> = Vec::new();
 
-                        // Add separator between value ops and IS NULL section
-                        if value_section_separator_idx == Some(idx) {
+                        // Heading for the "type your own value" group, and a
+                        // rule wherever a group starts.
+                        if has_custom && idx == custom_start {
+                            if idx > 0 {
+                                elements.push(
+                                    div()
+                                        .h(px(1.0))
+                                        .mx(Spacing::SM)
+                                        .my(Spacing::XS)
+                                        .bg(submenu_border)
+                                        .into_any_element(),
+                                );
+                            }
+                            elements.push(
+                                div()
+                                    .px(Spacing::SM)
+                                    .py(Spacing::XS)
+                                    .child(
+                                        Text::caption(custom_label.clone())
+                                            .font_size(FontSizes::XS),
+                                    )
+                                    .into_any_element(),
+                            );
+                        }
+
+                        if idx == null_start && idx > 0 {
                             elements.push(
                                 div()
                                     .h(px(1.0))

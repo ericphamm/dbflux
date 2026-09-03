@@ -372,6 +372,10 @@ struct ContextMenuItem {
     icon: Option<dbflux_components::icons::AppIcon>,
     is_separator: bool,
     is_danger: bool,
+    /// Printable form of the key that runs this action, shown right-aligned
+    /// so the menu teaches the keyboard instead of hiding it. Filled from the
+    /// keymap, not written by hand.
+    shortcut: Option<SharedString>,
 }
 
 /// Kind of SQL statement to generate from row data.
