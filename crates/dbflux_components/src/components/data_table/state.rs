@@ -280,13 +280,26 @@ impl DataTableState {
         &self.selection
     }
 
+    /// Selecting a different cell while one is being edited commits that edit,
+    /// the way Enter would. Selection is the explicit act here; the editor's
+    /// own blur event is only a fallback, because it is dispatched by gpui at
+    /// draw time and gated on window activity, and a click on another cell is
+    /// not something the table should have to wait on an event to notice.
+    fn commit_edit_before_selecting(&mut self, coord: CellCoord, cx: &mut Context<Self>) {
+        if self.editing_cell.is_some_and(|editing| editing != coord) {
+            self.stop_editing(true, cx);
+        }
+    }
+
     pub fn select_cell(&mut self, coord: CellCoord, cx: &mut Context<Self>) {
+        self.commit_edit_before_selecting(coord, cx);
         self.selection.select_cell(coord);
         cx.emit(DataTableEvent::SelectionChanged(self.selection.clone()));
         cx.notify();
     }
 
     pub fn extend_selection(&mut self, coord: CellCoord, cx: &mut Context<Self>) {
+        self.commit_edit_before_selecting(coord, cx);
         self.selection.extend_to(coord);
         cx.emit(DataTableEvent::SelectionChanged(self.selection.clone()));
         cx.notify();
@@ -1168,9 +1181,20 @@ mod tests {
         fn render(
             &mut self,
             _window: &mut gpui::Window,
-            _cx: &mut gpui::Context<Self>,
+            cx: &mut gpui::Context<Self>,
         ) -> impl gpui::IntoElement {
-            gpui::div()
+            use gpui::{InteractiveElement, ParentElement};
+
+            // Mirror the real table: the table's focus handle wraps the
+            // editor. gpui derives focus paths from the rendered tree, so a
+            // blur listener only fires for a handle that was actually drawn.
+            let state = self.state.read(cx);
+            let focus_handle = state.focus_handle().clone();
+            let editor = state
+                .cell_input()
+                .cloned()
+                .map(|input| crate::controls::GpuiInput::new(&input));
+            gpui::div().track_focus(&focus_handle).children(editor)
         }
     }
 
@@ -1238,13 +1262,15 @@ mod tests {
     /// Negative: start_editing on a column in readonly_columns returns false.
     #[gpui::test]
     fn start_editing_blocked_by_readonly_column(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::selection::CellCoord;
         use std::collections::HashSet;
 
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
         let holder_clone = state_holder.clone();
 
-        let (_, window) = cx.add_window_view(move |_window, cx| {
+        let (_, window) = cx.add_window_view(move |window, cx| {
             let model = one_row_model();
             let state = cx.new(|cx| {
                 let mut s = super::DataTableState::new(model, cx);
@@ -1254,7 +1280,10 @@ mod tests {
                 s
             });
             holder_clone.replace(Some(state.clone()));
-            StateHarness { state }
+            // The real window's first layer is a gpui_component::Root; the
+            // Input reaches for it on focus and blur.
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
         });
 
         let state = state_holder
@@ -1283,13 +1312,15 @@ mod tests {
     /// Positive: start_editing on an editable, non-readonly column returns true.
     #[gpui::test]
     fn start_editing_allowed_on_non_readonly_editable_column(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::selection::CellCoord;
         use std::collections::HashSet;
 
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
         let holder_clone = state_holder.clone();
 
-        let (_, window) = cx.add_window_view(move |_window, cx| {
+        let (_, window) = cx.add_window_view(move |window, cx| {
             let model = one_row_model();
             let state = cx.new(|cx| {
                 let mut s = super::DataTableState::new(model, cx);
@@ -1299,7 +1330,10 @@ mod tests {
                 s
             });
             holder_clone.replace(Some(state.clone()));
-            StateHarness { state }
+            // The real window's first layer is a gpui_component::Root; the
+            // Input reaches for it on focus and blur.
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
         });
 
         let state = state_holder
@@ -1333,6 +1367,8 @@ mod tests {
     /// freshly opened edit.
     #[gpui::test]
     fn rapid_cell_switch_ignores_stale_blur(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::selection::CellCoord;
         use crate::controls::InputEvent;
         use std::collections::HashSet;
@@ -1340,7 +1376,7 @@ mod tests {
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
         let holder_clone = state_holder.clone();
 
-        let (_, window) = cx.add_window_view(move |_window, cx| {
+        let (_, window) = cx.add_window_view(move |window, cx| {
             let model = two_row_model();
             let state = cx.new(|cx| {
                 let mut s = super::DataTableState::new(model, cx);
@@ -1349,7 +1385,10 @@ mod tests {
                 s
             });
             holder_clone.replace(Some(state.clone()));
-            StateHarness { state }
+            // The real window's first layer is a gpui_component::Root; the
+            // Input reaches for it on focus and blur.
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
         });
 
         let state = state_holder
@@ -1398,20 +1437,25 @@ mod tests {
     /// the selection moved on.
     #[gpui::test]
     fn blur_closes_the_inline_editor(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::selection::CellCoord;
         use crate::controls::InputEvent;
 
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
         let holder_clone = state_holder.clone();
 
-        let (_, window) = cx.add_window_view(move |_window, cx| {
+        let (_, window) = cx.add_window_view(move |window, cx| {
             let state = cx.new(|cx| {
                 let mut s = super::DataTableState::new(two_row_model(), cx);
                 s.set_pk_columns(vec![0]);
                 s
             });
             holder_clone.replace(Some(state.clone()));
-            StateHarness { state }
+            // The real window's first layer is a gpui_component::Root; the
+            // Input reaches for it on focus and blur.
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
         });
 
         let state = state_holder
@@ -1441,24 +1485,84 @@ mod tests {
         );
     }
 
-    /// Committing with Enter closes the editor and asks the table to take
-    /// focus back, so its key-context actions keep working afterwards.
+    /// What clicking another cell does: it selects that cell. That alone must
+    /// end the edit in progress and keep the typed value as a pending change,
+    /// without depending on the editor's blur event being delivered.
     #[gpui::test]
-    fn enter_commits_and_requests_refocus(cx: &mut gpui::TestAppContext) {
+    fn selecting_another_cell_commits_the_open_editor(cx: &mut gpui::TestAppContext) {
+        cx.update(gpui_component::init);
         use super::super::selection::CellCoord;
-        use crate::controls::InputEvent;
 
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
         let holder_clone = state_holder.clone();
 
-        let (_, window) = cx.add_window_view(move |_window, cx| {
+        let (_, window) = cx.add_window_view(move |window, cx| {
             let state = cx.new(|cx| {
                 let mut s = super::DataTableState::new(two_row_model(), cx);
                 s.set_pk_columns(vec![0]);
                 s
             });
             holder_clone.replace(Some(state.clone()));
-            StateHarness { state }
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
+        });
+
+        let state = state_holder
+            .borrow()
+            .clone()
+            .expect("state entity must be created");
+
+        window.update(|window, app| {
+            state.update(app, |s, cx| {
+                assert!(s.start_editing(CellCoord::new(0, 1), window, cx));
+                let input = s.cell_input().cloned().expect("editor is open");
+                input.update(cx, |input, cx| input.set_value("carol", window, cx));
+            })
+        });
+
+        // The click on another cell.
+        window.update(|_window, app| {
+            state.update(app, |s, cx| s.select_cell(CellCoord::new(1, 0), cx));
+        });
+
+        window.update(|_, app| {
+            let s = state.read(app);
+            assert_eq!(s.editing_cell(), None, "the old editor must be gone");
+            assert_eq!(
+                s.selection().active,
+                Some(CellCoord::new(1, 0)),
+                "the clicked cell must be the active one"
+            );
+            assert!(
+                s.edit_buffer().is_cell_dirty(0, 1),
+                "the typed value must survive as a pending change, as Enter would leave it"
+            );
+        });
+    }
+
+    /// Committing with Enter closes the editor and asks the table to take
+    /// focus back, so its key-context actions keep working afterwards.
+    #[gpui::test]
+    fn enter_commits_and_requests_refocus(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
+        use super::super::selection::CellCoord;
+        use crate::controls::InputEvent;
+
+        let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let holder_clone = state_holder.clone();
+
+        let (_, window) = cx.add_window_view(move |window, cx| {
+            let state = cx.new(|cx| {
+                let mut s = super::DataTableState::new(two_row_model(), cx);
+                s.set_pk_columns(vec![0]);
+                s
+            });
+            holder_clone.replace(Some(state.clone()));
+            // The real window's first layer is a gpui_component::Root; the
+            // Input reaches for it on focus and blur.
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
         });
 
         let state = state_holder
@@ -1510,7 +1614,7 @@ mod tests {
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
         let holder_clone = state_holder.clone();
 
-        let (_, window) = cx.add_window_view(move |_window, cx| {
+        let (_, window) = cx.add_window_view(move |window, cx| {
             let state = cx.new(|cx| {
                 let mut s = super::DataTableState::new(two_row_model(), cx);
                 s.select_cell(CellCoord::new(0, 0), cx);
@@ -1518,7 +1622,10 @@ mod tests {
                 s
             });
             holder_clone.replace(Some(state.clone()));
-            StateHarness { state }
+            // The real window's first layer is a gpui_component::Root; the
+            // Input reaches for it on focus and blur.
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
         });
 
         let state = state_holder
@@ -1531,6 +1638,8 @@ mod tests {
 
     #[gpui::test]
     fn record_mode_transposes_arrow_navigation(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::events::Direction;
         use super::super::selection::CellCoord;
 
@@ -1559,6 +1668,8 @@ mod tests {
 
     #[gpui::test]
     fn record_mode_home_and_end_walk_fields(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::events::Edge;
         use super::super::selection::CellCoord;
 
@@ -1585,6 +1696,8 @@ mod tests {
 
     #[gpui::test]
     fn leaving_record_mode_restores_grid_navigation(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::events::Direction;
         use super::super::selection::CellCoord;
 
@@ -1606,19 +1719,24 @@ mod tests {
 
     #[gpui::test]
     fn entering_record_mode_selects_a_field_when_nothing_is_active(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
         use super::super::selection::CellCoord;
 
         let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
         let holder_clone = state_holder.clone();
 
-        let (_, window) = cx.add_window_view(move |_window, cx| {
+        let (_, window) = cx.add_window_view(move |window, cx| {
             let state = cx.new(|cx| {
                 let mut s = super::DataTableState::new(two_row_model(), cx);
                 s.set_record_mode(true, cx);
                 s
             });
             holder_clone.replace(Some(state.clone()));
-            StateHarness { state }
+            // The real window's first layer is a gpui_component::Root; the
+            // Input reaches for it on focus and blur.
+            let harness = cx.new(|_cx| StateHarness { state });
+            gpui_component::Root::new(harness, window, cx)
         });
 
         let state = state_holder
