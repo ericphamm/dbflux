@@ -483,6 +483,7 @@ conflictos con los atajos del sistema en macOS).
 | `Ctrl+Tab` / `Ctrl+Shift+Tab`             | Pestaña siguiente / anterior           |
 | `Ctrl+Alt+Right` / `Cmd+Alt+Right`        | Pestaña siguiente (atajo del navegador) |
 | `Ctrl+Alt+Left` / `Cmd+Alt+Left`          | Pestaña anterior                        |
+| `Ctrl+PageDown` / `Ctrl+PageUp` (Linux)   | Pestaña siguiente / anterior            |
 | `Ctrl+1` .. `Ctrl+9` / `Cmd+1` .. `Cmd+9` | Cambiar a la pestaña N                 |
 | `Ctrl+o` / `Cmd+o`                        | Abrir archivo de script                |
 | `Ctrl+Enter` / `Cmd+Enter`                | Ejecutar query                         |

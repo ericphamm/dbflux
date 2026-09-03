@@ -95,7 +95,7 @@ fn global_layer() -> KeymapLayer {
     // macOS is the system app switcher and must not be shadowed.
     layer.bind(KeyChord::new("tab", Modifiers::ctrl()), Command::NextTab);
     // The browser chord for the same thing, which is what most people reach
-    // for: Cmd+Option+Arrow on macOS, Ctrl+Alt+Arrow elsewhere.
+    // for: Cmd+Option+Arrow on macOS, Ctrl+Alt+Arrow on Windows.
     layer.bind(
         KeyChord::new("right", Modifiers::primary_alt()),
         Command::NextTab,
@@ -104,6 +104,20 @@ fn global_layer() -> KeymapLayer {
         KeyChord::new("left", Modifiers::primary_alt()),
         Command::PrevTab,
     );
+
+    // Linux gets a second pair, because the first one does not arrive there:
+    // GNOME, KDE and XFCE all bind Ctrl+Alt+Arrow to switching workspaces and
+    // take the keystroke before any application sees it. Ctrl+PageUp and
+    // Ctrl+PageDown are what browsers use on Linux and no desktop claims
+    // them.
+    #[cfg(target_os = "linux")]
+    {
+        layer.bind(
+            KeyChord::new("pagedown", Modifiers::ctrl()),
+            Command::NextTab,
+        );
+        layer.bind(KeyChord::new("pageup", Modifiers::ctrl()), Command::PrevTab);
+    }
     layer.bind(
         KeyChord::new("tab", Modifiers::ctrl_shift()),
         Command::PrevTab,
@@ -701,7 +715,7 @@ fn text_input_layer() -> KeymapLayer {
 
     // Switching tabs likewise: a text buffer owning the keyboard is no reason
     // to be stuck on the tab it is in. `ContextId::TextInput` has no parent
-    // layer, so the global binding does not reach here on its own.
+    // layer, so the global bindings do not reach here on their own.
     layer.bind(
         KeyChord::new("right", Modifiers::primary_alt()),
         Command::NextTab,
@@ -710,6 +724,14 @@ fn text_input_layer() -> KeymapLayer {
         KeyChord::new("left", Modifiers::primary_alt()),
         Command::PrevTab,
     );
+    #[cfg(target_os = "linux")]
+    {
+        layer.bind(
+            KeyChord::new("pagedown", Modifiers::ctrl()),
+            Command::NextTab,
+        );
+        layer.bind(KeyChord::new("pageup", Modifiers::ctrl()), Command::PrevTab);
+    }
 
     // Save must keep working while a text buffer owns the keyboard: the S3
     // object editors report `ContextId::TextInput`, which has no parent
@@ -919,10 +941,34 @@ mod tests {
 
     #[test]
     fn the_browser_chord_switches_tabs_everywhere_it_is_needed() {
-        let keymap = default_keymap();
-        let next = KeyChord::new("right", Modifiers::primary_alt());
-        let previous = KeyChord::new("left", Modifiers::primary_alt());
+        assert_tab_chords_resolve(
+            default_keymap(),
+            &KeyChord::new("right", Modifiers::primary_alt()),
+            &KeyChord::new("left", Modifiers::primary_alt()),
+        );
+    }
 
+    /// Ctrl+PageDown / Ctrl+PageUp exist on Linux only, where the desktop
+    /// takes the arrow pair for its own workspaces before the application can
+    /// see it. Elsewhere the chord stays unbound rather than showing up in the
+    /// shortcut list as something the platform's browsers do not use either.
+    #[test]
+    fn the_page_chords_switch_tabs_on_linux_alone() {
+        let keymap = default_keymap();
+        let next = KeyChord::new("pagedown", Modifiers::ctrl());
+        let previous = KeyChord::new("pageup", Modifiers::ctrl());
+
+        #[cfg(target_os = "linux")]
+        assert_tab_chords_resolve(keymap, &next, &previous);
+
+        #[cfg(not(target_os = "linux"))]
+        for context in [ContextId::Global, ContextId::Editor, ContextId::TextInput] {
+            assert_eq!(keymap.resolve(context, &next), None, "{context:?}");
+            assert_eq!(keymap.resolve(context, &previous), None, "{context:?}");
+        }
+    }
+
+    fn assert_tab_chords_resolve(keymap: &KeymapStack, next: &KeyChord, previous: &KeyChord) {
         for context in [
             ContextId::Global,
             ContextId::Editor,
@@ -931,14 +977,14 @@ mod tests {
             ContextId::TextInput,
         ] {
             assert_eq!(
-                keymap.resolve(context, &next),
+                keymap.resolve(context, next),
                 Some(Command::NextTab),
-                "{context:?}"
+                "{context:?} {next}"
             );
             assert_eq!(
-                keymap.resolve(context, &previous),
+                keymap.resolve(context, previous),
                 Some(Command::PrevTab),
-                "{context:?}"
+                "{context:?} {previous}"
             );
         }
     }

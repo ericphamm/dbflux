@@ -317,6 +317,7 @@ DBFlux 使用分层、随上下文变化的键位映射。当前生效的层取�
 | `Ctrl+Tab` / `Ctrl+Shift+Tab`             | 下一个 / 上一个标签页 |
 | `Ctrl+Alt+Right` / `Cmd+Alt+Right`        | 下一个标签页（浏览器快捷键） |
 | `Ctrl+Alt+Left` / `Cmd+Alt+Left`          | 上一个标签页          |
+| `Ctrl+PageDown` / `Ctrl+PageUp`（Linux）  | 下一个 / 上一个标签页 |
 | `Ctrl+1` .. `Ctrl+9` / `Cmd+1` .. `Cmd+9` | 切换到标签页 N        |
 | `Ctrl+o` / `Cmd+o`                        | 打开脚本文件          |
 | `Ctrl+Enter` / `Cmd+Enter`                | 执行查询              |
