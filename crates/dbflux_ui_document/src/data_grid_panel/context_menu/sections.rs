@@ -185,7 +185,16 @@ impl DataGridPanel {
                 d.child(Icon::new(icon).small().color(color))
             })
             .when(icon.is_none(), |d| d.pl(px(20.0)))
-            .child(Text::caption(label).color(color))
+            // A filter label carries the cell value, which can be longer than
+            // the menu is wide; without this it painted straight over the
+            // panel's edge instead of being cut off.
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .truncate()
+                    .child(Text::caption(label).color(color)),
+            )
             .into_any_element()
     }
 
@@ -280,24 +289,33 @@ impl DataGridPanel {
                         }))
                     })
                     .when(icon.is_none(), |d| d.pl(px(20.0)))
-                    .child(Text::caption(label).color(if is_selected {
-                        if is_danger {
-                            theme.danger
-                        } else {
-                            theme.accent_foreground
-                        }
-                    } else {
-                        label_color
-                    }))
-                    // Pushes the shortcut to the right edge and keeps the
-                    // label left-aligned when there is none.
-                    .child(div().flex_1())
+                    // Takes the free space so the shortcut sits at the right
+                    // edge, and truncates rather than overflowing the panel.
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .truncate()
+                            .child(Text::caption(label).color(if is_selected {
+                                if is_danger {
+                                    theme.danger
+                                } else {
+                                    theme.accent_foreground
+                                }
+                            } else {
+                                label_color
+                            })),
+                    )
                     .when_some(shortcut, |d, shortcut| {
-                        d.child(MonoCaption::new(shortcut).color(if is_selected {
-                            theme.accent_foreground
-                        } else {
-                            theme.muted_foreground
-                        }))
+                        d.child(
+                            div()
+                                .flex_shrink_0()
+                                .child(MonoCaption::new(shortcut).color(if is_selected {
+                                    theme.accent_foreground
+                                } else {
+                                    theme.muted_foreground
+                                })),
+                        )
                     })
                     .into_any_element(),
             );
@@ -459,6 +477,7 @@ impl DataGridPanel {
             .rounded(Radii::MD)
             .shadow_lg()
             .py(Spacing::XS)
+            .overflow_hidden()
             .occlude()
             .on_mouse_down(MouseButton::Left, |_, _, cx| {
                 cx.stop_propagation();
@@ -566,7 +585,13 @@ impl DataGridPanel {
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.handle_context_menu_action(action, window, cx);
                                 }))
-                                .child(Text::caption(label.clone()).color(item_color))
+                                .child(
+                                    div()
+                                        .flex_1()
+                                        .min_w_0()
+                                        .truncate()
+                                        .child(Text::caption(label.clone()).color(item_color)),
+                                )
                                 .into_any_element(),
                         );
 
@@ -731,6 +756,7 @@ impl DataGridPanel {
             .rounded(Radii::MD)
             .shadow_lg()
             .py(Spacing::XS)
+            .overflow_hidden()
             .occlude()
             .on_mouse_down(MouseButton::Left, |_, _, cx| {
                 cx.stop_propagation();
@@ -940,6 +966,7 @@ impl DataGridPanel {
             .shadow_lg()
             .py(Spacing::XS)
             // Capture clicks within submenu bounds (prevents overlay from closing menu)
+            .overflow_hidden()
             .occlude()
             // Stop click from bubbling to parent "Generate SQL" trigger
             .on_mouse_down(MouseButton::Left, |_, _, cx| {
@@ -1126,6 +1153,7 @@ impl DataGridPanel {
             .rounded(Radii::MD)
             .shadow_lg()
             .py(Spacing::XS)
+            .overflow_hidden()
             .occlude()
             .on_mouse_down(MouseButton::Left, |_, _, cx| {
                 cx.stop_propagation();
@@ -1378,6 +1406,7 @@ impl DataGridPanel {
                         .w(menu_width)
                         .shadow_lg()
                         .py(Spacing::XS)
+                        .overflow_hidden()
                         .occlude()
                         .on_mouse_down(MouseButton::Left, |_, _, cx| {
                             cx.stop_propagation();
