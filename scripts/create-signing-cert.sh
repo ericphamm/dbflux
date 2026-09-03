@@ -46,10 +46,21 @@ fi
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
+# The system OpenSSL, not whatever is first on PATH. A Homebrew or Anaconda
+# OpenSSL 3 writes PKCS#12 files with algorithms Apple's importer rejects, and
+# the failure reads as a wrong password rather than an unsupported format.
+OPENSSL=/usr/bin/openssl
+
+# The bundle is handed straight to `security import` below and deleted with the
+# working directory; it exists for the length of this script. It still needs a
+# password, because macOS refuses to import a bundle whose MAC covers an empty
+# one — that, not the algorithms, is what makes an empty password fail.
+BUNDLE_PASSWORD="$(uuidgen)"
+
 echo "==> creating a self-signed code-signing certificate: $IDENTITY"
 # `codeSigning` in the extended key usage is what makes `codesign` accept the
 # certificate; without it the identity exists but is never offered.
-openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+"$OPENSSL" req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
   -keyout "$workdir/key.pem" \
   -out "$workdir/cert.pem" \
   -subj "/CN=$IDENTITY" \
@@ -58,16 +69,17 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
   -addext "extendedKeyUsage=critical,codeSigning" \
   >/dev/null 2>&1
 
-openssl pkcs12 -export \
+"$OPENSSL" pkcs12 -export \
   -inkey "$workdir/key.pem" \
   -in "$workdir/cert.pem" \
   -out "$workdir/identity.p12" \
-  -passout pass: \
+  -passout "pass:$BUNDLE_PASSWORD" \
   >/dev/null 2>&1
 
 echo "==> importing it into your login keychain"
 # -T grants codesign access to the private key without a prompt per signature.
-security import "$workdir/identity.p12" -k "$KEYCHAIN" -P "" -T /usr/bin/codesign >/dev/null
+security import "$workdir/identity.p12" -k "$KEYCHAIN" \
+  -P "$BUNDLE_PASSWORD" -T /usr/bin/codesign >/dev/null
 
 echo "==> trusting it for code signing"
 echo "    (macOS will ask you to confirm)"
