@@ -2328,6 +2328,7 @@ modals:
 palette:
   search:
     placeholder: 搜索命令、连接、表、脚本…
+    databases_placeholder: 在所有已连接的数据库中搜索表…
   empty: 没有匹配项
   section:
     connections: 连接
@@ -2348,6 +2349,8 @@ palette:
   import_dashboard:
     name: 从 JSON 导入仪表盘…
   command:
+    search_databases:
+      name: 搜索数据库
     new_query_tab:
       name: 新建查询标签页
     run_query:
@@ -2548,6 +2551,7 @@ settings:
       unknown_other: 另一个绑定
     command:
       toggle_command_palette: 切换命令面板
+      search_databases: 搜索数据库
       new_query_tab: 新建查询标签页
       close_tab: 关闭当前标签页
       next_tab: 下一个标签页

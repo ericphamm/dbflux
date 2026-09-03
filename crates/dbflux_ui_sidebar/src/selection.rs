@@ -15,6 +15,138 @@ enum ConnectionKeyboardMovePlan {
 impl Sidebar {
     const TYPEAHEAD_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(850);
 
+    /// Select and scroll to the tree node of a table or view, expanding
+    /// whatever sits above it, so something opened from the palette is shown
+    /// in the tree the way a click there would have left it.
+    ///
+    /// `database` and `schema` are matched loosely: callers built from a
+    /// schema snapshot know the database while the tree node may not (and the
+    /// other way round for lazily loaded servers), so a `None` on either side
+    /// is treated as "any". Returns `false` when no node matches — the profile
+    /// is not connected, or that database has never been loaded.
+    pub fn reveal_table(
+        &mut self,
+        profile_id: Uuid,
+        database: Option<&str>,
+        schema: Option<&str>,
+        name: &str,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        self.reveal_node(
+            |node| match node {
+                SchemaNodeId::Table {
+                    profile_id: node_profile,
+                    database: node_database,
+                    schema: node_schema,
+                    name: node_name,
+                }
+                | SchemaNodeId::View {
+                    profile_id: node_profile,
+                    database: node_database,
+                    schema: node_schema,
+                    name: node_name,
+                } => {
+                    *node_profile == profile_id
+                        && node_name == name
+                        && schema.is_none_or(|schema| node_schema == schema)
+                        && (database.is_none()
+                            || node_database.is_none()
+                            || node_database.as_deref() == database)
+                }
+                _ => false,
+            },
+            cx,
+        )
+    }
+
+    /// Collection counterpart of [`Self::reveal_table`].
+    pub fn reveal_collection(
+        &mut self,
+        profile_id: Uuid,
+        database: &str,
+        name: &str,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        self.reveal_node(
+            |node| {
+                matches!(
+                    node,
+                    SchemaNodeId::Collection {
+                        profile_id: node_profile,
+                        database: node_database,
+                        name: node_name,
+                    } if *node_profile == profile_id && node_database == database && node_name == name
+                )
+            },
+            cx,
+        )
+    }
+
+    fn reveal_node(
+        &mut self,
+        matches: impl Fn(&SchemaNodeId) -> bool,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        self.set_active_tab(SidebarTab::Connections, cx);
+
+        let items = self.build_tree_items_with_overrides(cx);
+        let mut path = Vec::new();
+        if !Self::find_node_path(&items, &matches, &mut path) {
+            return false;
+        }
+        let Some(((target_id, _), ancestors)) = path.split_last() else {
+            return false;
+        };
+        let target_id = target_id.clone();
+
+        // Expanding rebuilds the tree, so only touch folders that are closed.
+        let collapsed: Vec<String> = ancestors
+            .iter()
+            .filter(|(_, expanded)| !expanded)
+            .map(|(id, _)| id.clone())
+            .collect();
+        for id in collapsed {
+            self.set_expanded(&id, true, cx);
+        }
+
+        let Some(index) = self.find_item_index(&target_id, cx) else {
+            return false;
+        };
+
+        self.clear_selection(cx);
+        self.set_selection_anchor(&target_id);
+        self.tree_state.update(cx, |state, cx| {
+            state.set_selected_index(Some(index), cx);
+            state.scroll_to_item(index, gpui::ScrollStrategy::Center);
+        });
+        cx.notify();
+        true
+    }
+
+    /// Path of `(item id, is expanded)` from the root down to the first node
+    /// `matches` accepts; the last entry is the node itself.
+    fn find_node_path(
+        items: &[TreeItem],
+        matches: &impl Fn(&SchemaNodeId) -> bool,
+        path: &mut Vec<(String, bool)>,
+    ) -> bool {
+        for item in items {
+            let id = item.id.to_string();
+            if parse_node_id(&id).is_some_and(|node| matches(&node)) {
+                path.push((id, item.is_expanded()));
+                return true;
+            }
+            if !item.children.is_empty() {
+                path.push((id, item.is_expanded()));
+                if Self::find_node_path(&item.children, matches, path) {
+                    return true;
+                }
+                path.pop();
+            }
+        }
+        false
+    }
+
     /// Select the first visible table/view whose name starts with the
     /// incrementally typed prefix. Returns whether the keystroke belongs to an
     /// active type-ahead sequence and should therefore be consumed.

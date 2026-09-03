@@ -363,6 +363,26 @@ struct FilteredItem {
     score: i64,
 }
 
+/// Added to the fuzzy score when the query occurs verbatim in the text.
+///
+/// Skim scores are in the hundreds, so this lifts every contiguous match above
+/// every scattered one: for `email`, `customer_email_change_request` must beat
+/// `affiliate_api_log`, which only matches because its letters appear in
+/// order. The scattered matches stay in the list — they are what lets a user
+/// type `opncm` for "Open Connection Manager" — but they sort last.
+const CONTIGUOUS_MATCH_BONUS: i64 = 100_000;
+
+/// Score `text` against `query`, or `None` when it does not match at all.
+fn match_score(matcher: &SkimMatcherV2, text: &str, query: &str) -> Option<i64> {
+    let score = matcher.fuzzy_match(text, query)?;
+    let contiguous = text.to_lowercase().contains(&query.to_lowercase());
+    Some(if contiguous {
+        score + CONTIGUOUS_MATCH_BONUS
+    } else {
+        score
+    })
+}
+
 const VISIBLE_ITEMS: usize = 8;
 
 /// Section grouping for the rendered palette list.
@@ -607,6 +627,25 @@ impl CommandPalette {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.open_with_items_and_placeholder(
+            items,
+            dbflux_i18n::t!("palette.search.placeholder").into(),
+            window,
+            cx,
+        );
+    }
+
+    /// Like [`Self::open_with_items`], with a placeholder that tells the user
+    /// what this particular opening searches — the palette is reused for
+    /// narrower pickers (database search, saved charts) and the default
+    /// "commands, connections, tables, scripts" hint would be wrong there.
+    pub fn open_with_items_and_placeholder(
+        &mut self,
+        items: Vec<PaletteItem>,
+        placeholder: SharedString,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.items = items;
         self.filtered = self
             .items
@@ -620,6 +659,7 @@ impl CommandPalette {
         self.scroll_offset = 0;
 
         self.input_state.update(cx, |state, cx| {
+            state.set_placeholder(placeholder, window, cx);
             state.set_value("", window, cx);
             state.focus(window, cx);
         });
@@ -679,9 +719,7 @@ impl CommandPalette {
                 .iter()
                 .enumerate()
                 .filter_map(|(index, item)| {
-                    let search_text = item.search_text();
-                    self.matcher
-                        .fuzzy_match(&search_text, query)
+                    match_score(&self.matcher, &item.search_text(), query)
                         .map(|score| FilteredItem { index, score })
                 })
                 .collect();
@@ -976,6 +1014,8 @@ impl Render for CommandPalette {
                     this.hide(cx);
                 }),
             )
+            // Wheel events over the scrim must not reach the document below.
+            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
             .on_action(cx.listener(|this, _: &SelectPrev, _window, cx| {
                 this.select_prev(cx);
             }))
@@ -1034,6 +1074,10 @@ impl Render for CommandPalette {
                             .p(Spacing::XS)
                             .on_scroll_wheel(cx.listener(
                                 |this, event: &ScrollWheelEvent, _window, cx| {
+                                    // The palette floats over the document;
+                                    // without this the grid underneath scrolls
+                                    // along with the list.
+                                    cx.stop_propagation();
                                     let delta = event.delta.pixel_delta(px(1.0));
                                     if delta.y < px(0.0) {
                                         this.scroll_down(cx);
@@ -1158,11 +1202,13 @@ impl Render for CommandPalette {
 #[cfg(test)]
 mod tests {
     use super::{
-        PaletteCommand, PaletteItem, ResourceItem, palette_qualifier_text, palette_shortcut_text,
+        CONTIGUOUS_MATCH_BONUS, PaletteCommand, PaletteItem, ResourceItem, match_score,
+        palette_qualifier_text, palette_shortcut_text,
     };
     use dbflux_components::theme;
     use dbflux_components::tokens::FontSizes;
     use dbflux_components::typography::AppFonts;
+    use fuzzy_matcher::skim::SkimMatcherV2;
     use gpui::TestAppContext;
     use gpui_component::theme::Theme;
     use std::fs;
@@ -1219,6 +1265,34 @@ mod tests {
             assert!(inspection.has_custom_color_override);
             assert!(!inspection.uses_muted_foreground_override);
         }
+    }
+
+    #[test]
+    fn contiguous_matches_outrank_scattered_ones() {
+        let matcher = SkimMatcherV2::default();
+
+        // Search text carries the connection name too, which is where the
+        // scattered match gets its `m` from — exactly the noise seen in use.
+        let contiguous = match_score(
+            &matcher,
+            "Table Monixa Local customer_email_change_request monixa",
+            "email",
+        )
+        .unwrap();
+        let scattered = match_score(
+            &matcher,
+            "Table Monixa Local affiliate_api_log monixa",
+            "email",
+        )
+        .unwrap();
+        assert!(
+            contiguous > scattered,
+            "{contiguous} should beat {scattered}"
+        );
+
+        // Case does not matter for the bonus, and a non-match stays a non-match.
+        assert!(match_score(&matcher, "Table EMAIL", "email").unwrap() >= CONTIGUOUS_MATCH_BONUS);
+        assert_eq!(match_score(&matcher, "Table orders", "email"), None);
     }
 
     #[test]

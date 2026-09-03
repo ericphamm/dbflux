@@ -7,6 +7,9 @@
 pub enum Command {
     // === Global ===
     ToggleCommandPalette,
+    /// Open the palette scoped to connections and their tables, so one
+    /// search covers every connected database.
+    SearchDatabases,
     NewQueryTab,
     CloseCurrentTab,
     NextTab,
@@ -126,6 +129,7 @@ impl Command {
     pub fn from_palette_id(command_id: &str) -> Option<Self> {
         match command_id {
             "new_query_tab" => Some(Command::NewQueryTab),
+            "search_databases" => Some(Command::SearchDatabases),
             "run_query" => Some(Command::RunQuery),
             "run_query_in_new_tab" => Some(Command::RunQueryInNewTab),
             "save_query" => Some(Command::SaveQuery),
@@ -167,6 +171,7 @@ impl Command {
     pub fn display_name(&self) -> &'static str {
         match self {
             Command::ToggleCommandPalette => "Toggle Command Palette",
+            Command::SearchDatabases => "Search Databases",
             Command::NewQueryTab => "New Query Tab",
             Command::CloseCurrentTab => "Close Current Tab",
             Command::NextTab => "Next Tab",
@@ -273,6 +278,7 @@ impl Command {
     pub fn id(&self) -> &'static str {
         match self {
             Command::ToggleCommandPalette => "toggle_command_palette",
+            Command::SearchDatabases => "search_databases",
             Command::NewQueryTab => "new_query_tab",
             Command::CloseCurrentTab => "close_tab",
             Command::NextTab => "next_tab",
@@ -380,6 +386,7 @@ impl Command {
         #[cfg_attr(not(feature = "mcp"), allow(unused_mut))]
         let mut variants = vec![
             Command::ToggleCommandPalette,
+            Command::SearchDatabases,
             Command::NewQueryTab,
             Command::CloseCurrentTab,
             Command::NextTab,
@@ -477,6 +484,7 @@ impl Command {
     pub fn category(&self) -> &'static str {
         match self {
             Command::ToggleCommandPalette
+            | Command::SearchDatabases
             | Command::NewQueryTab
             | Command::CloseCurrentTab
             | Command::NextTab
@@ -578,6 +586,7 @@ impl Command {
         matches!(
             self,
             Command::ToggleCommandPalette
+                | Command::SearchDatabases
                 | Command::NewQueryTab
                 | Command::OpenScriptFile
                 | Command::CloseCurrentTab

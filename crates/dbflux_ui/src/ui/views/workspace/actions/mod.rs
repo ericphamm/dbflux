@@ -232,7 +232,10 @@ mod tests {
     // --- PaletteItem model tests ---
 
     use crate::ui::overlays::command_palette::{PaletteItem, PaletteSelection, ResourceItem};
-    use crate::ui::views::workspace::{build_resource_items_from_schema, map_item_to_selection};
+    use crate::ui::views::workspace::{
+        build_resource_items_from_database_schemas, build_resource_items_from_schema,
+        dedup_resource_items, map_item_to_selection,
+    };
     use dbflux_core::{
         CollectionInfo, DataStructure, DbSchemaInfo, DocumentSchema, KeySpaceInfo, KeyValueSchema,
         RelationalSchema, ScriptEntry, TableInfo, ViewInfo,
@@ -514,6 +517,78 @@ mod tests {
             .filter(|item| matches!(item, PaletteItem::Resource(ResourceItem::View { .. })))
             .count();
         assert_eq!(view_count, 1);
+    }
+
+    #[test]
+    fn build_resources_from_lazily_loaded_database_schemas() {
+        // MySQL-style: the snapshot only names the databases, and each
+        // database's tables arrive separately when the sidebar expands it.
+        let pid = uuid::Uuid::new_v4();
+        let table = |name: &str, database: &str| TableInfo {
+            name: name.to_string(),
+            schema: Some(database.to_string()),
+            columns: None,
+            indexes: None,
+            foreign_keys: None,
+            constraints: None,
+            sample_fields: None,
+            presentation: dbflux_core::CollectionPresentation::DataGrid,
+            child_items: None,
+            storage_hints: None,
+        };
+        let mut database_schemas = std::collections::HashMap::new();
+        database_schemas.insert(
+            "shop".to_string(),
+            DbSchemaInfo {
+                name: "shop".to_string(),
+                tables: vec![table("orders", "shop")],
+                views: vec![ViewInfo {
+                    name: "open_orders".to_string(),
+                    schema: Some("shop".to_string()),
+                }],
+                custom_types: None,
+            },
+        );
+        database_schemas.insert(
+            "crm".to_string(),
+            DbSchemaInfo {
+                name: "crm".to_string(),
+                tables: vec![table("customer_address", "crm")],
+                views: vec![],
+                custom_types: None,
+            },
+        );
+
+        let mut items = Vec::new();
+        build_resource_items_from_database_schemas(pid, "mysql", &database_schemas, &mut items);
+
+        let mut names: Vec<(String, Option<String>)> = items
+            .iter()
+            .filter_map(|item| match item {
+                PaletteItem::Resource(ResourceItem::Table { name, database, .. })
+                | PaletteItem::Resource(ResourceItem::View { name, database, .. }) => {
+                    Some((name.clone(), database.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        names.sort();
+        assert_eq!(
+            names,
+            vec![
+                ("customer_address".to_string(), Some("crm".to_string())),
+                ("open_orders".to_string(), Some("shop".to_string())),
+                ("orders".to_string(), Some("shop".to_string())),
+            ],
+            "every lazily loaded database contributes, tagged with its name"
+        );
+
+        // A table present in both the snapshot and the lazy cache must not
+        // appear twice.
+        build_resource_items_from_database_schemas(pid, "mysql", &database_schemas, &mut items);
+        assert_eq!(items.len(), 6);
+        dedup_resource_items(&mut items);
+        assert_eq!(items.len(), 3);
     }
 
     #[test]

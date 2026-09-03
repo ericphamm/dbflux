@@ -100,6 +100,19 @@ Cambia entre las dos pestañas con `q` o `e`.
 - `r` refresca el schema; `d` desconecta la conexión activa.
 - `m` abre el menú contextual del elemento seleccionado.
 
+### Encontrar una tabla en cualquier sitio
+
+`Ctrl+P` (`Cmd+P` en macOS) abre una búsqueda sobre todas las bases de datos
+conectadas a la vez. Escribe cualquier parte del nombre — `addr` encuentra tanto
+`customer_address` como `addresses` — y la lista se reduce a las conexiones,
+tablas, vistas, colecciones y keyspaces que coinciden, agrupados por conexión.
+`Enter` abre el elemento seleccionado, desplaza su pestaña a la vista y lo
+selecciona en el árbol de la barra lateral para que veas dónde está; `Escape`
+o un clic fuera del popup lo cierra. La lista se construye a partir del esquema ya cargado en la barra
+lateral: solo participan las conexiones activas y, en servidores que cargan las
+bases de datos una a una (MySQL, MariaDB), una base de datos aporta sus tablas
+una vez que se ha expandido.
+
 ### Carga diferida (lazy loading)
 
 El schema se carga de forma diferida. Al conectar, DBFlux obtiene metadatos
@@ -434,7 +447,7 @@ queries con nombre.
 - `Alt+h` (en el editor) alterna el desplegable de historial de queries.
 - `Ctrl+s` (`Cmd+s`) — **Save** la query actual.
 - `Ctrl+Shift+s` (`Cmd+Shift+s`) — **Save File As**.
-- `Ctrl+p` (`Cmd+p`, en el editor) — abre el explorador de queries guardadas.
+- `Ctrl+Shift+o` (`Cmd+Shift+o`, en el editor) — abre el explorador de queries guardadas.
 
 Dentro del modal de historial puedes navegar con `Ctrl+j`/`Ctrl+k` (o las
 flechas), abrir una entrada con `Enter`, y usar los mnemónicos locales `Ctrl+f`
@@ -456,6 +469,7 @@ conflictos con los atajos del sistema en macOS).
 | Teclas                                    | Acción                                 |
 | ----------------------------------------- | -------------------------------------- |
 | `Ctrl+Shift+P` / `Cmd+Shift+P`            | Alternar command palette               |
+| `Ctrl+P` / `Cmd+P`                        | Buscar tablas en todas las bases de datos conectadas |
 | `Ctrl+n` / `Cmd+n`                        | Nueva pestaña de query                 |
 | `Ctrl+w` / `Cmd+w`                        | Cerrar pestaña actual                  |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab`             | Pestaña siguiente / anterior           |
@@ -503,7 +517,7 @@ conflictos con los atajos del sistema en macOS).
 | ------------------------------ | ---------------------------------------- |
 | `Ctrl+h` / `Ctrl+j` / `Ctrl+k` | Enfocar panel izquierda / abajo / arriba |
 | `Alt+h`                        | Alternar desplegable de historial        |
-| `Ctrl+p` / `Cmd+p`             | Abrir queries guardadas                  |
+| `Ctrl+Shift+o` / `Cmd+Shift+o` | Abrir queries guardadas                  |
 | `Ctrl+s` / `Cmd+s`             | Guardar query                            |
 | `Ctrl+Shift+s` / `Cmd+Shift+s` | Guardar archivo como                     |
 | `Enter`                        | Enfocar / ejecutar                       |

@@ -73,6 +73,14 @@ fn global_layer() -> KeymapLayer {
         Command::ToggleCommandPalette,
     );
 
+    // Database search — Cmd+P on macOS, Ctrl+P elsewhere. The same palette,
+    // narrowed to connections and their tables, so one search covers every
+    // connected database.
+    layer.bind(
+        KeyChord::new("p", Modifiers::primary()),
+        Command::SearchDatabases,
+    );
+
     // Tab management — primary modifier (Cmd on macOS, Ctrl elsewhere).
     layer.bind(
         KeyChord::new("n", Modifiers::primary()),
@@ -306,8 +314,10 @@ fn editor_layer() -> KeymapLayer {
         KeyChord::new("h", Modifiers::alt()),
         Command::ToggleHistoryDropdown,
     );
+    // Primary+P belongs to the global database search, so the saved-queries
+    // browser lives on Primary+Shift+O ("open").
     layer.bind(
-        KeyChord::new("p", Modifiers::primary()),
+        KeyChord::new("o", Modifiers::primary_shift()),
         Command::OpenSavedQueries,
     );
     layer.bind(KeyChord::new("s", Modifiers::primary()), Command::SaveQuery);
@@ -660,6 +670,14 @@ fn text_input_layer() -> KeymapLayer {
         Command::NewQueryTab,
     );
 
+    // The database search is meant to work from anywhere, including a filter
+    // box or the value editor, so it is repeated here for the same reason as
+    // save below.
+    layer.bind(
+        KeyChord::new("p", Modifiers::primary()),
+        Command::SearchDatabases,
+    );
+
     // Save must keep working while a text buffer owns the keyboard: the S3
     // object editors report `ContextId::TextInput`, which has no parent
     // layer, so without these bindings Ctrl/Cmd+S is silently dropped.
@@ -867,6 +885,28 @@ mod tests {
     }
 
     #[test]
+    fn primary_p_searches_databases_from_every_context() {
+        let keymap = default_keymap();
+        let primary_p = KeyChord::new("p", Modifiers::primary());
+
+        // The editor used to claim Primary+P for saved queries; the database
+        // search must win everywhere or the shortcut is unreliable.
+        for context in [
+            ContextId::Global,
+            ContextId::Editor,
+            ContextId::Sidebar,
+            ContextId::Results,
+            ContextId::TextInput,
+        ] {
+            assert_eq!(
+                keymap.resolve(context, &primary_p),
+                Some(Command::SearchDatabases),
+                "{context:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_sidebar_vim_navigation() {
         let keymap = default_keymap();
 
@@ -888,7 +928,7 @@ mod tests {
         let keymap = default_keymap();
 
         let alt_h = KeyChord::new("h", Modifiers::alt());
-        let primary_p = KeyChord::new("p", Modifiers::primary());
+        let primary_shift_o = KeyChord::new("o", Modifiers::primary_shift());
         let primary_s = KeyChord::new("s", Modifiers::primary());
 
         assert_eq!(
@@ -896,7 +936,7 @@ mod tests {
             Some(Command::ToggleHistoryDropdown)
         );
         assert_eq!(
-            keymap.resolve(ContextId::Editor, &primary_p),
+            keymap.resolve(ContextId::Editor, &primary_shift_o),
             Some(Command::OpenSavedQueries)
         );
         assert_eq!(

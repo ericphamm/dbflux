@@ -140,6 +140,88 @@ pub(super) fn build_resource_items_from_schema(
     }
 }
 
+/// Extract resource items from the per-database schemas a connection has
+/// loaded lazily (MySQL/MariaDB expand one database at a time).
+///
+/// Those tables never reach the `DataStructure` snapshot — it only lists the
+/// database names — so a palette built from the snapshot alone shows nothing
+/// for such servers even though the sidebar has the tables on screen.
+///
+/// Databases are visited in name order so the resulting list is stable.
+pub(super) fn build_resource_items_from_database_schemas(
+    profile_id: uuid::Uuid,
+    profile_name: &str,
+    database_schemas: &std::collections::HashMap<String, dbflux_core::DbSchemaInfo>,
+    items: &mut Vec<PaletteItem>,
+) {
+    let mut databases: Vec<(&String, &dbflux_core::DbSchemaInfo)> =
+        database_schemas.iter().collect();
+    databases.sort_by_key(|(name, _)| *name);
+
+    for (database, db_schema) in databases {
+        for table in &db_schema.tables {
+            items.push(PaletteItem::Resource(ResourceItem::Table {
+                profile_id,
+                profile_name: profile_name.to_string(),
+                database: Some(database.clone()),
+                schema: table.schema.clone(),
+                name: table.name.clone(),
+            }));
+        }
+        for view in &db_schema.views {
+            items.push(PaletteItem::Resource(ResourceItem::View {
+                profile_id,
+                profile_name: profile_name.to_string(),
+                database: Some(database.clone()),
+                schema: view.schema.clone(),
+                name: view.name.clone(),
+            }));
+        }
+    }
+}
+
+/// Drop resource items that name the same object twice, keeping the first.
+///
+/// The snapshot and the lazy per-database cache can both describe the
+/// current database, and a table listed twice would open the same document
+/// from two rows.
+pub(super) fn dedup_resource_items(items: &mut Vec<PaletteItem>) {
+    let mut seen = std::collections::HashSet::new();
+    items.retain(|item| {
+        let PaletteItem::Resource(resource) = item else {
+            return true;
+        };
+        let key = match resource {
+            ResourceItem::Table {
+                profile_id,
+                database,
+                schema,
+                name,
+                ..
+            } => format!("table|{profile_id}|{database:?}|{schema:?}|{name}"),
+            ResourceItem::View {
+                profile_id,
+                database,
+                schema,
+                name,
+                ..
+            } => format!("view|{profile_id}|{database:?}|{schema:?}|{name}"),
+            ResourceItem::Collection {
+                profile_id,
+                database,
+                name,
+                ..
+            } => format!("collection|{profile_id}|{database}|{name}"),
+            ResourceItem::KeyValueDb {
+                profile_id,
+                database,
+                ..
+            } => format!("keyspace|{profile_id}|{database}"),
+        };
+        seen.insert(key)
+    });
+}
+
 /// Map a `PaletteItem` to its corresponding `PaletteSelection`.
 ///
 /// Separated from `CommandPalette` for testability — pure data transformation.
@@ -592,12 +674,37 @@ impl Workspace {
                         window,
                         cx,
                     );
+                    // The palette found the table by name; show where it lives.
+                    this.sidebar.update(cx, |sidebar, cx| {
+                        if !sidebar.reveal_table(
+                            *profile_id,
+                            database.as_deref(),
+                            table.schema.as_deref(),
+                            &table.name,
+                            cx,
+                        ) {
+                            log::debug!("table {} not present in the sidebar tree", table.name);
+                        }
+                    });
                 }
                 PaletteSelection::OpenCollection {
                     profile_id,
                     collection,
                 } => {
                     this.open_collection_document(*profile_id, collection.clone(), window, cx);
+                    this.sidebar.update(cx, |sidebar, cx| {
+                        if !sidebar.reveal_collection(
+                            *profile_id,
+                            &collection.database,
+                            &collection.name,
+                            cx,
+                        ) {
+                            log::debug!(
+                                "collection {} not present in the sidebar tree",
+                                collection.name
+                            );
+                        }
+                    });
                 }
                 PaletteSelection::OpenKeyValue {
                     profile_id,
@@ -1610,6 +1717,7 @@ impl Workspace {
         // kept literal on every platform (Ctrl+Tab, Ctrl+Shift+1..4) keep
         // `ctrl-` here as well.
         struct ShortcutLabels {
+            search_databases: &'static str,
             new_query_tab: &'static str,
             run_query: &'static str,
             run_query_in_new_tab: &'static str,
@@ -1625,13 +1733,14 @@ impl Workspace {
 
         #[cfg(target_os = "macos")]
         const SC: ShortcutLabels = ShortcutLabels {
+            search_databases: "cmd-p",
             new_query_tab: "cmd-n",
             run_query: "cmd-enter",
             run_query_in_new_tab: "cmd-shift-enter",
             save_query: "cmd-s",
             save_file_as: "cmd-shift-s",
             open_script_file: "cmd-o",
-            open_history: "cmd-p",
+            open_history: "alt-h",
             close_tab: "cmd-w",
             export_results: "cmd-e",
             toggle_sidebar: "cmd-b",
@@ -1639,13 +1748,14 @@ impl Workspace {
         };
         #[cfg(not(target_os = "macos"))]
         const SC: ShortcutLabels = ShortcutLabels {
+            search_databases: "ctrl-p",
             new_query_tab: "ctrl-n",
             run_query: "ctrl-enter",
             run_query_in_new_tab: "ctrl-shift-enter",
             save_query: "ctrl-s",
             save_file_as: "ctrl-shift-s",
             open_script_file: "ctrl-o",
-            open_history: "ctrl-p",
+            open_history: "alt-h",
             close_tab: "ctrl-w",
             export_results: "ctrl-e",
             toggle_sidebar: "ctrl-b",
@@ -1730,6 +1840,12 @@ impl Workspace {
             )
             .with_shortcut(SC.export_results),
             // Connections
+            PaletteCommand::new(
+                "search_databases",
+                dbflux_i18n::t!("palette.command.search_databases.name"),
+                dbflux_i18n::t!("palette.category.connections"),
+            )
+            .with_shortcut(SC.search_databases),
             PaletteCommand::new(
                 "open_connection_manager",
                 dbflux_i18n::t!("palette.command.open_connection_manager.name"),
@@ -1958,6 +2074,68 @@ impl Workspace {
         }
     }
 
+    /// Open the palette narrowed to connections and everything inside them.
+    ///
+    /// This is the Primary+P search: one query matched anywhere in the name
+    /// across every connected database, without commands and scripts in the
+    /// way. Pressing the shortcut while the palette is open closes it.
+    pub fn search_databases(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.command_palette.read(cx).is_visible() {
+            self.command_palette.update(cx, |palette, cx| {
+                palette.hide(cx);
+            });
+            self.set_focus(self.focus_target, window, cx);
+            return;
+        }
+
+        let items = self.build_database_search_items(cx);
+        self.command_palette.update(cx, |palette, cx| {
+            palette.open_with_items_and_placeholder(
+                items,
+                dbflux_i18n::t!("palette.search.databases_placeholder").into(),
+                window,
+                cx,
+            );
+        });
+    }
+
+    /// Connections plus the tables, views, collections and keyspaces of every
+    /// connected one — the searchable universe for [`Self::search_databases`].
+    fn build_database_search_items(&self, cx: &Context<Self>) -> Vec<PaletteItem> {
+        let mut items = Vec::new();
+
+        let app_state = self.app_state.read(cx);
+        let connections = app_state.connections();
+
+        for profile in app_state.profiles() {
+            items.push(PaletteItem::Connection {
+                profile_id: profile.id,
+                name: profile.name.clone(),
+                is_connected: connections.contains_key(&profile.id),
+            });
+        }
+
+        for (&profile_id, connected) in connections.iter() {
+            if let Some(schema) = &connected.schema {
+                build_resource_items_from_schema(
+                    profile_id,
+                    &connected.profile.name,
+                    &schema.structure,
+                    &mut items,
+                );
+            }
+            build_resource_items_from_database_schemas(
+                profile_id,
+                &connected.profile.name,
+                &connected.database_schemas,
+                &mut items,
+            );
+        }
+
+        dedup_resource_items(&mut items);
+        items
+    }
+
     /// Build the palette item list from current app state.
     fn build_palette_items(&self, cx: &Context<Self>) -> Vec<PaletteItem> {
         let mut items: Vec<PaletteItem> = Self::default_commands()
@@ -1988,7 +2166,14 @@ impl Workspace {
                     &mut items,
                 );
             }
+            build_resource_items_from_database_schemas(
+                profile_id,
+                &profile_name,
+                &connected.database_schemas,
+                &mut items,
+            );
         }
+        dedup_resource_items(&mut items);
 
         if let Some(dir) = app_state.scripts_directory() {
             let root = dir.root_path().to_path_buf();

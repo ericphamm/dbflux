@@ -90,6 +90,18 @@ Switch between the two tabs with `q` or `e`.
 - `r` refreshes the schema; `d` disconnects the active connection.
 - `m` opens the context menu for the selected item.
 
+### Finding a table anywhere
+
+`Ctrl+P` (`Cmd+P` on macOS) opens a search across every connected database at
+once. Type any part of a name — `addr` finds `customer_address` as well as
+`addresses` — and the list narrows to matching connections, tables, views,
+collections and keyspaces, grouped by connection. `Enter` opens the selected
+item, scrolls its tab into view and selects it in the sidebar tree so you can
+see where it lives; `Escape` or a click outside the popup closes it. The list is built from
+the schema already loaded in the sidebar, so only connected connections take
+part, and on servers that load databases one at a time (MySQL, MariaDB) a
+database contributes its tables once it has been expanded.
+
 ### Lazy loading
 
 Schema is loaded lazily. On connect, DBFlux fetches shallow metadata (names).
@@ -399,7 +411,7 @@ DBFlux keeps a history of completed queries and lets you save named queries.
 - `Alt+h` (in the editor) toggles the query history dropdown.
 - `Ctrl+s` (`Cmd+s`) — **Save** the current query.
 - `Ctrl+Shift+s` (`Cmd+Shift+s`) — **Save File As**.
-- `Ctrl+p` (`Cmd+p`, in the editor) — open the saved-queries browser.
+- `Ctrl+Shift+o` (`Cmd+Shift+o`, in the editor) — open the saved-queries browser.
 
 Inside the history modal you can navigate with `Ctrl+j`/`Ctrl+k` (or arrow keys),
 open an entry with `Enter`, and use the local mnemonics `Ctrl+f` (toggle
@@ -420,6 +432,7 @@ stay `Ctrl` on all platforms (to avoid clashing with macOS system shortcuts).
 | Keys | Action |
 |------|--------|
 | `Ctrl+Shift+P` / `Cmd+Shift+P` | Toggle command palette |
+| `Ctrl+P` / `Cmd+P` | Search tables across all connected databases |
 | `Ctrl+n` / `Cmd+n` | New query tab |
 | `Ctrl+w` / `Cmd+w` | Close current tab |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
@@ -467,7 +480,7 @@ stay `Ctrl` on all platforms (to avoid clashing with macOS system shortcuts).
 |------|--------|
 | `Ctrl+h` / `Ctrl+j` / `Ctrl+k` | Focus left / down / up panel |
 | `Alt+h` | Toggle history dropdown |
-| `Ctrl+p` / `Cmd+p` | Open saved queries |
+| `Ctrl+Shift+o` / `Cmd+Shift+o` | Open saved queries |
 | `Ctrl+s` / `Cmd+s` | Save query |
 | `Ctrl+Shift+s` / `Cmd+Shift+s` | Save file as |
 | `Enter` | Focus / execute |

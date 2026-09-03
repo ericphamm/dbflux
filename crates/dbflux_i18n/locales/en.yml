@@ -2428,6 +2428,7 @@ modals:
 palette:
   search:
     placeholder: Search commands, connections, tables, scripts...
+    databases_placeholder: Search tables across all connected databases...
   empty: No matching items
   section:
     connections: Connections
@@ -2448,6 +2449,8 @@ palette:
   import_dashboard:
     name: Import Dashboard from JSON...
   command:
+    search_databases:
+      name: Search Databases
     new_query_tab:
       name: New Query Tab
     run_query:
@@ -2658,6 +2661,7 @@ settings:
       unknown_other: another binding
     command:
       toggle_command_palette: Toggle Command Palette
+      search_databases: Search Databases
       new_query_tab: New Query Tab
       close_tab: Close Current Tab
       next_tab: Next Tab
