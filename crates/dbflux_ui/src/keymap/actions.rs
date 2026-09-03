@@ -57,8 +57,18 @@ actions!(
         // File operations
         OpenScriptFile,
         SaveFileAs,
+        // The Tab key inside the workspace window. See
+        // `workspace_keybindings` for why this is a native binding.
+        TabKey,
     ]
 );
+
+/// Key context on the workspace's root element.
+///
+/// Deeper than `gpui-component`'s "Root", which is what lets a binding
+/// registered for it win inside the main window while leaving the settings and
+/// connection-manager windows with the library's own behaviour.
+pub const WORKSPACE_CONTEXT: &str = "Workspace";
 
 // Re-export shared document/navigation actions from dbflux_components so
 // callers inside dbflux_ui can keep using `crate::keymap::SelectNext` etc.
@@ -97,6 +107,15 @@ pub fn workspace_keybindings() -> Vec<KeyBinding> {
         KeyBinding::new("ctrl-shift-2", FocusEditor, None),
         KeyBinding::new("ctrl-shift-3", FocusResults, None),
         KeyBinding::new("ctrl-shift-4", FocusBackgroundTasks, None),
+        // Tab has to be a native binding: `gpui-component` claims it in the
+        // "Root" context for its own focus ring, and an action beats the
+        // window's `on_key_down`, so the workspace keymap never saw the key.
+        // Bound to the deeper "Workspace" context, this wins inside the main
+        // window; the workspace handler then resolves Tab through the keymap
+        // like any other chord (record view in the results grid, panel cycle
+        // elsewhere). A focused text input keeps Tab, because its own "Input"
+        // binding is deeper still.
+        KeyBinding::new("tab", TabKey, Some(WORKSPACE_CONTEXT)),
     ]
 }
 
@@ -217,6 +236,38 @@ mod tests {
         assert!(
             top.action().partial_eq(&FocusEditor),
             "FocusEditor must be the top-ranked match for ctrl-shift-2 (GitHub #65 regression guard)",
+        );
+    }
+
+    // Regression test for the Tab key: `gpui-component` binds Tab to its own
+    // focus-ring action in the "Root" context, which is an ancestor of the
+    // whole window, and an action beats the workspace's `on_key_down`. Our
+    // binding must therefore out-rank it, which it does by sitting in the
+    // deeper "Workspace" context.
+    #[test]
+    fn workspace_tab_binding_outranks_the_library_root_binding() {
+        gpui::actions!(dbflux_test_only, [RootTabBinding]);
+
+        let mut keymap = Keymap::default();
+        // Stand-in for the gpui-component binding registered during its init.
+        keymap.add_bindings([KeyBinding::new("tab", RootTabBinding, Some("Root"))]);
+        keymap.add_bindings(workspace_keybindings());
+
+        let typed = [Keystroke::parse("tab").unwrap()];
+        let mut root = KeyContext::default();
+        root.add("Root");
+        let mut workspace = KeyContext::default();
+        workspace.add(WORKSPACE_CONTEXT);
+        let context_stack = [root, workspace];
+
+        let (matches, _pending) = keymap.bindings_for_input(&typed, &context_stack);
+        let top = matches
+            .first()
+            .expect("tab must match inside the workspace window");
+
+        assert!(
+            top.action().partial_eq(&TabKey),
+            "the workspace binding must win over the library's Root binding",
         );
     }
 

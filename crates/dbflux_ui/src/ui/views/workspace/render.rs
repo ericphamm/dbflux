@@ -382,6 +382,7 @@ impl Render for Workspace {
 
         div()
             .id("workspace-root")
+            .key_context(crate::keymap::WORKSPACE_CONTEXT)
             .relative()
             .size_full()
             .bg(bg_color)
@@ -403,6 +404,19 @@ impl Render for Workspace {
                 }),
             )
             .track_focus(&focus_handle)
+            .on_action(cx.listener(|this, _: &keymap::TabKey, window, cx| {
+                let context = this.active_context(cx);
+                let chord =
+                    dbflux_app::keymap::KeyChord::new("tab", dbflux_app::keymap::Modifiers::none());
+
+                if let Some(cmd) = this.keymap.resolve(context, &chord)
+                    && this.dispatch(cmd, window, cx)
+                {
+                    return;
+                }
+
+                cx.propagate();
+            }))
             .on_action(
                 cx.listener(|this, _: &keymap::ToggleCommandPalette, window, cx| {
                     this.toggle_command_palette(window, cx);
