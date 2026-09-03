@@ -50,6 +50,12 @@ pub struct DataTableState {
     /// up/down walk the fields of the current row, left/right walk rows.
     record_mode: bool,
 
+    /// Set when an inline edit is committed and the table should take focus
+    /// back. Consumed by `DataTable::render`, the nearest place that has a
+    /// `Window` — see `start_editing` for why the editor's own event handler
+    /// cannot do it.
+    pending_refocus: bool,
+
     /// Scroll handle for horizontal scrolling.
     horizontal_scroll_handle: ScrollHandle,
 
@@ -132,6 +138,7 @@ impl DataTableState {
             vertical_scroll_handle: UniformListScrollHandle::new(),
             record_scroll_handle: UniformListScrollHandle::new(),
             record_mode: false,
+            pending_refocus: false,
             horizontal_scroll_handle: ScrollHandle::new(),
             horizontal_offset: px(0.0),
             editing_cell: None,
@@ -325,6 +332,12 @@ impl DataTableState {
             self.scroll_to_cell(active.row, active.col);
         }
         cx.notify();
+    }
+
+    /// Whether a committed edit asked for the table to take focus back.
+    /// Clears the request; the caller is expected to act on `true`.
+    pub fn take_pending_refocus(&mut self) -> bool {
+        std::mem::take(&mut self.pending_refocus)
     }
 
     /// Scroll handle for the record-mode field list.
@@ -813,23 +826,28 @@ impl DataTableState {
 
         self._editing_subs.clear();
 
-        // `subscribe_in` rather than `subscribe` so the table can take focus
-        // back when the editor closes. Without that, the focused element is
-        // simply unmounted and the window is left with no focus at all, which
-        // silently disables every action bound to the table's key context
-        // (Cmd+Enter to save a row, the vim-style row operations, and so on).
-        self._editing_subs.push(cx.subscribe_in(
-            &input,
-            window,
-            |this, _input, event: &InputEvent, window, cx| match event {
+        // Plain `subscribe`, deliberately. `subscribe_in` would hand this
+        // closure a `Window`, but its wrapper re-enters the window with
+        // `window_handle.update(..).unwrap_or(false)` — and `Blur` is emitted
+        // from inside a focus change, while the window is already on the update
+        // stack. The re-entry fails and the event is dropped without a trace,
+        // leaving the editor open after the user clicked elsewhere.
+        //
+        // Committing an edit still has to hand focus back to the table, or the
+        // unmounted editor leaves the window with no focus and every action
+        // bound to the table's key context stops working. That needs a
+        // `Window`, so it is requested here and performed in `DataTable::render`.
+        self._editing_subs.push(
+            cx.subscribe(&input, |this, _input, event: &InputEvent, cx| match event {
                 InputEvent::PressEnter { .. } => {
                     this.stop_editing(true, cx);
-                    this.focus(window, cx);
+                    this.pending_refocus = true;
+                    cx.notify();
                 }
                 InputEvent::Blur => this.stop_editing(false, cx),
                 _ => {}
-            },
-        ));
+            }),
+        );
 
         self.editing_cell = Some(coord);
         self.cell_input = Some(input);
@@ -1365,6 +1383,114 @@ mod tests {
             editing_cell,
             Some(CellCoord::new(1, 1)),
             "a stale Blur from the previous input must not cancel the new edit"
+        );
+    }
+
+    // =========================================================================
+    // Inline editor lifecycle
+    // =========================================================================
+
+    /// Clicking elsewhere blurs the editor, and the blur has to close it.
+    ///
+    /// Regression: delivering `Blur` through `subscribe_in` dropped the event
+    /// whenever the window was already on the update stack — which it is
+    /// during a focus change — so the editor stayed open on the old cell while
+    /// the selection moved on.
+    #[gpui::test]
+    fn blur_closes_the_inline_editor(cx: &mut gpui::TestAppContext) {
+        use super::super::selection::CellCoord;
+        use crate::controls::InputEvent;
+
+        let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let holder_clone = state_holder.clone();
+
+        let (_, window) = cx.add_window_view(move |_window, cx| {
+            let state = cx.new(|cx| {
+                let mut s = super::DataTableState::new(two_row_model(), cx);
+                s.set_pk_columns(vec![0]);
+                s
+            });
+            holder_clone.replace(Some(state.clone()));
+            StateHarness { state }
+        });
+
+        let state = state_holder
+            .borrow()
+            .clone()
+            .expect("state entity must be created");
+
+        let input = window.update(|window, app| {
+            state.update(app, |s, cx| {
+                assert!(s.start_editing(CellCoord::new(0, 1), window, cx));
+                s.cell_input().cloned().expect("editor is open")
+            })
+        });
+
+        window.update(|_window, app| {
+            input.update(app, |_input, cx| cx.emit(InputEvent::Blur));
+        });
+
+        assert_eq!(
+            window.update(|_, app| state.read(app).editing_cell()),
+            None,
+            "losing focus must close the editor"
+        );
+        assert!(
+            !window.update(|_, app| state.update(app, |s, _| s.take_pending_refocus())),
+            "a cancelled edit must not pull focus back — the user clicked somewhere else on purpose"
+        );
+    }
+
+    /// Committing with Enter closes the editor and asks the table to take
+    /// focus back, so its key-context actions keep working afterwards.
+    #[gpui::test]
+    fn enter_commits_and_requests_refocus(cx: &mut gpui::TestAppContext) {
+        use super::super::selection::CellCoord;
+        use crate::controls::InputEvent;
+
+        let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let holder_clone = state_holder.clone();
+
+        let (_, window) = cx.add_window_view(move |_window, cx| {
+            let state = cx.new(|cx| {
+                let mut s = super::DataTableState::new(two_row_model(), cx);
+                s.set_pk_columns(vec![0]);
+                s
+            });
+            holder_clone.replace(Some(state.clone()));
+            StateHarness { state }
+        });
+
+        let state = state_holder
+            .borrow()
+            .clone()
+            .expect("state entity must be created");
+
+        let input = window.update(|window, app| {
+            state.update(app, |s, cx| {
+                assert!(s.start_editing(CellCoord::new(0, 1), window, cx));
+                s.cell_input().cloned().expect("editor is open")
+            })
+        });
+
+        window.update(|_window, app| {
+            input.update(app, |_input, cx| {
+                cx.emit(InputEvent::PressEnter { secondary: false })
+            });
+        });
+
+        assert_eq!(
+            window.update(|_, app| state.read(app).editing_cell()),
+            None,
+            "Enter must commit and close the editor"
+        );
+        assert!(
+            window.update(|_, app| state.update(app, |s, _| s.take_pending_refocus())),
+            "a committed edit must hand focus back to the table"
+        );
+        assert!(
+            !window.update(|_, app| state.update(app, |s, _| s.take_pending_refocus())),
+            "the request is consumed once"
         );
     }
 
