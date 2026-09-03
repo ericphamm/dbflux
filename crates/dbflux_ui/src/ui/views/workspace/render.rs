@@ -160,8 +160,10 @@ impl Render for Workspace {
                 vec![]
             }
         };
-        let linux_title_bar =
-            platform::render_csd_title_bar_with_crumbs(window, cx, "DBFlux", &crumbs);
+        // Linux draws its own bar only under client-side decorations; macOS
+        // always does, because the system bar left-aligns the title.
+        let title_bar = platform::render_csd_title_bar_with_crumbs(window, cx, "DBFlux", &crumbs)
+            .or_else(|| platform::render_app_title_bar(window, cx, &self.window_title));
 
         let right_pane = if has_tabs {
             let workspace = cx.entity().clone();
@@ -634,7 +636,7 @@ impl Render for Workspace {
                     .flex()
                     .flex_col()
                     .size_full()
-                    .when_some(linux_title_bar, |el, title_bar| el.child(title_bar))
+                    .when_some(title_bar, |el, bar| el.child(bar))
                     .child(
                         div()
                             .flex()

@@ -8,6 +8,7 @@ pub use inspector::{WorkspaceInspector, WorkspaceInspectorEvent};
 
 use crate::app::{AppStateChanged, AppStateEntity};
 use dbflux_components;
+use dbflux_core::LogErr;
 use dbflux_core::observability::actions::CONFIG_CHANGE;
 use dbflux_ui_base::modals::{
     AddPanelOutcome, AddPanelRequest, CreateDashboardOutcome, CreateDashboardRequest,
@@ -2128,6 +2129,111 @@ impl Workspace {
                 cx,
             );
         });
+
+        self.load_missing_database_schemas(cx);
+    }
+
+    /// Fetch the schema of every connected database that has not been loaded
+    /// yet, and grow the open palette as the results land.
+    ///
+    /// Servers that load one database at a time only know the table names of
+    /// databases the user has expanded in the sidebar, which made a search
+    /// meant to cover everything depend on where the user had clicked first.
+    /// The core refuses the request for drivers that load their whole schema
+    /// on connect, so this stays driver-agnostic: it asks, and skips whatever
+    /// is refused.
+    fn load_missing_database_schemas(&mut self, cx: &mut Context<Self>) {
+        let targets: Vec<(uuid::Uuid, String)> = {
+            let app_state = self.app_state.read(cx);
+            app_state
+                .connections()
+                .iter()
+                .flat_map(|(&profile_id, connected)| {
+                    connected
+                        .schema
+                        .iter()
+                        .flat_map(|schema| schema.databases())
+                        .map(move |database| (profile_id, database.name.clone()))
+                        .collect::<Vec<_>>()
+                })
+                .filter(|(profile_id, database)| {
+                    app_state.needs_database_schema(*profile_id, database)
+                })
+                .collect()
+        };
+
+        for (profile_id, database) in targets {
+            if self.app_state.read(cx).is_background_task_limit_reached() {
+                log::info!("skipping the remaining schema prefetches: task limit reached");
+                break;
+            }
+
+            let params = match self.app_state.update(cx, |state, _cx| {
+                if state.is_operation_pending(profile_id, Some(&database)) {
+                    return Err("a fetch is already running".to_string());
+                }
+                let params = state.prepare_fetch_database_schema(profile_id, &database)?;
+                if !state.start_pending_operation(profile_id, Some(&database)) {
+                    return Err("another task claimed it first".to_string());
+                }
+                Ok(params)
+            }) {
+                Ok(params) => params,
+                Err(reason) => {
+                    // Expected for drivers that load everything up front and
+                    // for databases the sidebar is already fetching.
+                    log::debug!("not prefetching {database}: {reason}");
+                    continue;
+                }
+            };
+
+            let app_state = self.app_state.clone();
+            let database_for_task = database.clone();
+            let fetch = cx
+                .background_executor()
+                .spawn(async move { params.execute() });
+
+            cx.spawn(async move |workspace, cx| {
+                let result = fetch.await;
+
+                cx.update(|cx| {
+                    app_state.update(cx, |state, cx| {
+                        state.finish_pending_operation(profile_id, Some(&database_for_task));
+
+                        match result {
+                            Ok(fetched) => {
+                                state.set_database_schema(
+                                    fetched.profile_id,
+                                    fetched.database,
+                                    fetched.schema,
+                                );
+                            }
+                            Err(error) => {
+                                // No toast: the user asked to search, not to
+                                // open this database, and one unreachable
+                                // database should not interrupt the search.
+                                log::warn!(
+                                    "could not load the schema of {database_for_task}: {error}"
+                                );
+                            }
+                        }
+
+                        cx.emit(AppStateChanged);
+                    });
+
+                    workspace
+                        .update(cx, |workspace, cx| {
+                            let items = workspace.build_database_search_items(cx);
+                            workspace.command_palette.update(cx, |palette, cx| {
+                                palette.refresh_items(items, cx);
+                            });
+                        })
+                        .log_err();
+                })
+                .log_err();
+            })
+            .detach();
+        }
     }
 
     /// Connections plus the tables, views, collections and keyspaces of every

@@ -7,6 +7,7 @@ use dbflux_components::composites::MenuItem;
 use dbflux_components::icons::AppIcon;
 use dbflux_components::primitives::{Icon, Text};
 use dbflux_components::semantic::BannerColors as SemBannerColors;
+use dbflux_components::tokens::FontSizes;
 use dbflux_components::tokens::{Heights, Radii, Spacing};
 use dbflux_components::typography::{MonoCaption, MonoMeta};
 use gpui::prelude::FluentBuilder;
@@ -42,6 +43,34 @@ const TAB_MAX_WIDTH: Pixels = px(220.0);
 /// Widest the active tab gets. Larger than the rest so the table you are
 /// actually looking at shows its whole name.
 const TAB_ACTIVE_MAX_WIDTH: Pixels = px(360.0);
+
+/// A tab being dragged to a new position in the bar.
+#[derive(Clone)]
+pub struct TabDrag {
+    /// Where the tab sits right now — the source index for the move.
+    index: usize,
+    label: SharedString,
+}
+
+/// The label that follows the cursor while a tab is dragged.
+struct TabDragPreview {
+    label: SharedString,
+}
+
+impl Render for TabDragPreview {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.theme();
+        div()
+            .bg(theme.tab_bar)
+            .border_1()
+            .border_color(theme.drag_border)
+            .rounded(Radii::SM)
+            .px(Spacing::SM)
+            .py(Spacing::XS)
+            .shadow_md()
+            .child(Text::body(self.label.clone()).font_size(FontSizes::SM))
+    }
+}
 
 /// Title for the application window: the active document, the database it
 /// belongs to, then the product name — the order DBeaver and DbGate use, so
@@ -389,6 +418,16 @@ impl Render for TabBar {
             .child(
                 div()
                     .id("tab-strip")
+                    // A drag that ends outside a tab leaves the insertion
+                    // marker behind; clearing it here covers every release.
+                    .on_mouse_up(
+                        MouseButton::Left,
+                        cx.listener(|this, _, _, cx| {
+                            if this.drop_target_index.take().is_some() {
+                                cx.notify();
+                            }
+                        }),
+                    )
                     .flex_1()
                     .min_w_0()
                     .h_full()
@@ -568,6 +607,39 @@ impl TabBar {
             .when(is_drop_target, |el| {
                 el.border_l_2().border_color(cx.theme().accent)
             })
+            // Drag to reorder. The payload carries the index the tab started
+            // at, because by drop time the pointer only tells us where it
+            // landed.
+            .on_drag(
+                TabDrag {
+                    index: idx,
+                    label: meta.title.clone().into(),
+                },
+                |drag, _, _, cx| {
+                    cx.new(|_| TabDragPreview {
+                        label: drag.label.clone(),
+                    })
+                },
+            )
+            .drag_over::<TabDrag>({
+                let tab_bar = cx.entity().clone();
+                move |style, _, _, cx| {
+                    tab_bar.update(cx, |this, cx| {
+                        if this.drop_target_index != Some(idx) {
+                            this.drop_target_index = Some(idx);
+                            cx.notify();
+                        }
+                    });
+                    style
+                }
+            })
+            .on_drop(cx.listener(move |this, drag: &TabDrag, _window, cx| {
+                this.drop_target_index = None;
+                this.tab_manager.update(cx, |manager, cx| {
+                    manager.move_tab(drag.index, idx, cx);
+                });
+                cx.notify();
+            }))
             // Click to activate
             .on_click({
                 let tab_manager = tab_manager.clone();

@@ -667,6 +667,27 @@ impl CommandPalette {
         cx.notify();
     }
 
+    /// Replace the item list of an already-open palette, keeping the query
+    /// the user typed and, where it still exists, the row they had selected.
+    ///
+    /// Used while database schemas arrive in the background: the list grows
+    /// under the search box instead of forcing the user to reopen it.
+    pub fn refresh_items(&mut self, items: Vec<PaletteItem>, cx: &mut Context<Self>) {
+        if !self.visible {
+            return;
+        }
+
+        let selected = self.selected_index;
+        self.items = items;
+
+        let query = self.input_state.read(cx).value().to_string();
+        self.update_filter(&query, cx);
+
+        self.selected_index = selected.min(self.filtered.len().saturating_sub(1));
+        self.ensure_selected_visible();
+        cx.notify();
+    }
+
     pub fn register_commands(&mut self, _commands: Vec<PaletteCommand>) {
         // No-op; items are now set via open_with_items.
         // Kept to avoid breaking the call site during migration.

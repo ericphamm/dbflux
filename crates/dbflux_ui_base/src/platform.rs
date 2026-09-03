@@ -5,7 +5,9 @@
 /// adjust window creation accordingly.
 use dbflux_components::icons::AppIcon;
 #[cfg(target_os = "linux")]
-use dbflux_components::primitives::{Icon, Text};
+use dbflux_components::primitives::Icon;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use dbflux_components::primitives::Text;
 #[cfg(target_os = "linux")]
 use dbflux_components::tokens::ChromeColors;
 #[cfg(target_os = "linux")]
@@ -30,6 +32,86 @@ pub struct TitleCrumb {
 
 /// Title bar height for Linux CSD mode. Used for layout and client inset reporting.
 pub const TITLE_BAR_HEIGHT: gpui::Pixels = px(32.0);
+
+/// Where the macOS traffic lights sit once the app draws its own title bar.
+///
+/// The window is created with a transparent titlebar so the title can be
+/// centred the way DBeaver and DbGate centre theirs; macOS then leaves the
+/// buttons at their default height for a standard bar, which is shorter than
+/// [`TITLE_BAR_HEIGHT`], so they need moving down to stay centred in ours.
+#[cfg(target_os = "macos")]
+pub const MACOS_TRAFFIC_LIGHT_POSITION: gpui::Point<gpui::Pixels> = gpui::Point {
+    x: px(13.0),
+    y: px(10.0),
+};
+
+/// Width kept clear on the left of the macOS title bar for the traffic lights.
+#[cfg(target_os = "macos")]
+const MACOS_TRAFFIC_LIGHT_INSET: gpui::Pixels = px(78.0);
+
+/// The app-drawn title bar for macOS, with the title centred in the window.
+///
+/// macOS puts the system title against the left edge, next to the traffic
+/// lights, which buries it beside the sidebar instead of over the document it
+/// names. Drawing it means the bar is ours: centred text, the app's own
+/// colours, and the usual window gestures kept by hand — drag to move,
+/// double-click to zoom.
+///
+/// Returns `None` on every other platform so callers need no `cfg` of their
+/// own; Linux CSD keeps its own bar in
+/// [`render_csd_title_bar_with_crumbs`].
+#[cfg(target_os = "macos")]
+pub fn render_app_title_bar(
+    _window: &mut Window,
+    cx: &mut App,
+    title: &str,
+) -> Option<Stateful<gpui::Div>> {
+    use gpui::{InteractiveElement, MouseButton, ParentElement, Styled};
+    use gpui_component::{ActiveTheme, InteractiveElementExt};
+
+    let theme = cx.theme();
+
+    Some(
+        div()
+            .id("macos-title-bar")
+            .flex()
+            .flex_row()
+            .items_center()
+            .justify_center()
+            .h(TITLE_BAR_HEIGHT)
+            .w_full()
+            .flex_shrink_0()
+            .pl(MACOS_TRAFFIC_LIGHT_INSET)
+            .bg(theme.tab_bar)
+            .border_b_1()
+            .border_color(theme.border)
+            .on_mouse_down(MouseButton::Left, |_, window, _cx| {
+                window.start_window_move();
+            })
+            .on_double_click(|_, window, _cx| {
+                window.zoom_window();
+            })
+            .child(
+                div()
+                    // The inset above shifts the row's centre right; pulling
+                    // the same amount off the other side re-centres the text
+                    // against the window rather than against what is left of
+                    // the row.
+                    .pr(MACOS_TRAFFIC_LIGHT_INSET)
+                    .truncate()
+                    .child(Text::label_sm(title.to_string())),
+            ),
+    )
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn render_app_title_bar(
+    _window: &mut Window,
+    _cx: &mut App,
+    _title: &str,
+) -> Option<Stateful<gpui::Div>> {
+    None
+}
 
 /// Returns `true` when the current Linux desktop is expected to prefer app-drawn
 /// title bars instead of server-side decorations.

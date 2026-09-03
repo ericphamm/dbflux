@@ -403,6 +403,12 @@ fn run_gui() {
             app_id: Some(channel.app_id().into()),
             titlebar: Some(TitlebarOptions {
                 title: Some(channel.display_name().into()),
+                // macOS: hide the system title so the workspace can draw a
+                // centred one, and drop the traffic lights into that bar.
+                #[cfg(target_os = "macos")]
+                appears_transparent: true,
+                #[cfg(target_os = "macos")]
+                traffic_light_position: Some(platform::MACOS_TRAFFIC_LIGHT_POSITION),
                 ..Default::default()
             }),
             // Request client-side decorations on Linux to enable native Wayland support.
