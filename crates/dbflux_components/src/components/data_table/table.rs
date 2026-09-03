@@ -943,6 +943,7 @@ impl DataTable {
         let model = Arc::clone(state.model_arc());
 
         let state_entity = self.state.clone();
+        let state_for_blank = self.state.clone();
 
         // Body uses overflow_hidden to prevent wheel capture.
         // Horizontal position is set via margin based on state.horizontal_offset().
@@ -995,6 +996,18 @@ impl DataTable {
             .flex_1()
             .min_h_0()
             .overflow_hidden()
+            // A click in the space below the last row lands here rather than
+            // on a cell. Treat it like selecting another cell: commit the
+            // open edit and give the table back the keyboard, instead of
+            // leaving the editor open on a cell the user has left.
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                state_for_blank.update(cx, |state, cx| {
+                    if state.is_editing() {
+                        state.stop_editing(true, cx);
+                    }
+                    state.focus(window, cx);
+                });
+            })
             .child(list)
     }
 }
@@ -1234,6 +1247,10 @@ fn render_rows(
                 .when(row_bg.is_none() && !is_active_row && row_ix % 2 == 1, |d| {
                     d.bg(theme.table_even)
                 })
+                // Keep row clicks off the body: its handler commits the open
+                // editor, which must only happen for clicks beside the rows.
+                // Cells act on `on_click`, which still fires on this element.
+                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .children(cells)
                 .into_any_element()
         })
