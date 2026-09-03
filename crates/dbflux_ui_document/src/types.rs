@@ -110,4 +110,8 @@ pub struct DocumentMetaSnapshot {
     pub state: DocumentState,
     pub closable: bool,
     pub connection_id: Option<Uuid>,
+    /// Database the document belongs to, when it has one. The tab bar groups
+    /// consecutive tabs that share a connection and database under one band
+    /// carrying this label, and drops the same prefix from the tab title.
+    pub group: Option<String>,
 }

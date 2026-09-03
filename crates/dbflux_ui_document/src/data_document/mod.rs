@@ -200,6 +200,16 @@ impl DataDocument {
         self.focus_handle.focus(window);
     }
 
+    /// The database the document belongs to, for grouping its tab with its
+    /// siblings. Query results are not tied to one database and get `None`.
+    pub fn group_label(&self, cx: &App) -> Option<String> {
+        match self.data_grid.read(cx).source() {
+            DataSource::Table { database, .. } => database.clone(),
+            DataSource::Collection { collection, .. } => Some(collection.database.clone()),
+            DataSource::QueryResult { .. } => None,
+        }
+    }
+
     pub fn connection_id(&self, cx: &App) -> Option<Uuid> {
         match self.data_grid.read(cx).source() {
             DataSource::Table { profile_id, .. } => Some(*profile_id),

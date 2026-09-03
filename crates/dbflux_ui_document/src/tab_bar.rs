@@ -8,13 +8,90 @@ use dbflux_components::icons::AppIcon;
 use dbflux_components::primitives::{Icon, Text};
 use dbflux_components::semantic::BannerColors as SemBannerColors;
 use dbflux_components::tokens::{Heights, Radii, Spacing};
-use dbflux_components::typography::MonoMeta;
+use dbflux_components::typography::{MonoCaption, MonoMeta};
 use gpui::prelude::FluentBuilder;
 use gpui::*;
 use gpui_component::ActiveTheme;
 use gpui_component::tooltip::Tooltip;
+use uuid::Uuid;
 
 const TAB_BAR_HEIGHT: Pixels = Heights::TAB;
+
+/// Height of the band above each tab that names the database the tab
+/// belongs to. Every tab gets the band so the bar keeps one height; tabs
+/// without a database leave it blank.
+const TAB_GROUP_BAND: Pixels = Spacing::LG;
+
+/// What makes two neighbouring tabs share a band: same connection, same
+/// database.
+#[derive(Clone, PartialEq, Eq)]
+struct TabGroupKey {
+    connection_id: Option<Uuid>,
+    database: String,
+}
+
+impl TabGroupKey {
+    fn for_meta(meta: &DocumentMetaSnapshot) -> Option<Self> {
+        meta.group.clone().map(|database| Self {
+            connection_id: meta.connection_id,
+            database,
+        })
+    }
+
+    /// A colour that stays the same for this database for the whole session,
+    /// drawn from the theme's chart palette so it fits either theme. Hashing
+    /// rather than counting groups keeps a database's colour stable when tabs
+    /// open and close around it.
+    fn color(&self, theme: &gpui_component::theme::Theme) -> Hsla {
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.connection_id.hash(&mut hasher);
+        self.database.hash(&mut hasher);
+        match hasher.finish() % 5 {
+            0 => theme.chart_1,
+            1 => theme.chart_2,
+            2 => theme.chart_3,
+            3 => theme.chart_4,
+            _ => theme.chart_5,
+        }
+    }
+}
+
+/// The band rendered above one tab: coloured when the tab has a database,
+/// labelled only on the first tab of a run so the name reads once per group.
+struct TabGroupBand {
+    color: Option<Hsla>,
+    label: Option<SharedString>,
+}
+
+impl TabGroupBand {
+    fn new(
+        group: Option<&TabGroupKey>,
+        starts_group: bool,
+        theme: &gpui_component::theme::Theme,
+    ) -> Self {
+        Self {
+            color: group.map(|group| group.color(theme)),
+            label: group
+                .filter(|_| starts_group)
+                .map(|group| SharedString::from(group.database.clone())),
+        }
+    }
+}
+
+/// The band already names the database, so a title such as `monixa.customer`
+/// would repeat it; show `customer`. Titles that do not start with the
+/// database (PostgreSQL's `public.users` under database `app`) stay as they
+/// are — the schema is information the band does not carry.
+fn strip_group_prefix(title: &str, group: Option<&str>) -> String {
+    group
+        .and_then(|group| title.strip_prefix(group))
+        .and_then(|rest| rest.strip_prefix('.'))
+        .filter(|rest| !rest.is_empty())
+        .unwrap_or(title)
+        .to_string()
+}
 
 #[allow(dead_code)]
 pub struct TabBar {
@@ -29,6 +106,13 @@ pub struct TabBar {
     // Drag state (for future drag & drop support)
     dragging_tab: Option<DocumentId>,
     drop_target_index: Option<usize>,
+
+    /// Horizontal scroll of the tab strip, so the active tab can be brought
+    /// into view when there are more tabs than fit.
+    scroll_handle: ScrollHandle,
+    /// The tab that was active at the last render; a change means the new
+    /// one has to be scrolled into view.
+    last_active_id: Option<DocumentId>,
 }
 
 #[allow(dead_code)]
@@ -58,6 +142,8 @@ impl TabBar {
             active_tab_center_x: Rc::new(Cell::new(px(0.0))),
             dragging_tab: None,
             drop_target_index: None,
+            scroll_handle: ScrollHandle::new(),
+            last_active_id: None,
         }
     }
 
@@ -207,11 +293,37 @@ impl Render for TabBar {
             .map(|doc| (doc.meta_snapshot(cx), doc.change_summary(cx)))
             .collect();
 
+        // Bring a newly activated tab into view. Done here rather than on the
+        // activation event so it also covers tabs opened while the bar was
+        // busy elsewhere (the palette, a restored session).
+        if active_id != self.last_active_id {
+            self.last_active_id = active_id;
+            if let Some(index) = tab_data
+                .iter()
+                .position(|(meta, _)| Some(meta.id) == active_id)
+            {
+                self.scroll_handle.scroll_to_item(index);
+            }
+        }
+
         let mut tabs: Vec<AnyElement> = Vec::with_capacity(tab_data.len());
+        let mut previous_group: Option<TabGroupKey> = None;
         for (idx, (meta, change_summary)) in tab_data.into_iter().enumerate() {
+            let group = TabGroupKey::for_meta(&meta);
+            let starts_group = group.is_some() && group != previous_group;
+            let band = TabGroupBand::new(group.as_ref(), starts_group, cx.theme());
+            previous_group = group;
             tabs.push(
-                self.render_tab(meta, change_summary, idx, active_id, drop_target_index, cx)
-                    .into_any_element(),
+                self.render_tab(
+                    meta,
+                    change_summary,
+                    idx,
+                    active_id,
+                    drop_target_index,
+                    band,
+                    cx,
+                )
+                .into_any_element(),
             );
         }
 
@@ -221,7 +333,7 @@ impl Render for TabBar {
 
         div()
             .id("tab-bar")
-            .h(TAB_BAR_HEIGHT)
+            .h(TAB_BAR_HEIGHT + TAB_GROUP_BAND)
             .w_full()
             .flex()
             .items_center()
@@ -230,14 +342,18 @@ impl Render for TabBar {
             .border_color(border_color)
             .child(
                 div()
+                    .id("tab-strip")
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
                     .flex()
                     .items_center()
-                    .overflow_x_hidden()
+                    .overflow_x_scroll()
+                    .track_scroll(&self.scroll_handle)
                     .gap_px()
                     .children(tabs)
                     .child(new_tab_btn),
             )
-            .child(div().flex_1())
     }
 }
 
@@ -254,6 +370,7 @@ impl TabBar {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn render_tab(
         &self,
         meta: DocumentMetaSnapshot,
@@ -261,6 +378,7 @@ impl TabBar {
         idx: usize,
         active_id: Option<DocumentId>,
         drop_target_index: Option<usize>,
+        band: TabGroupBand,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let id = meta.id;
@@ -269,7 +387,8 @@ impl TabBar {
         let is_dirty = meta.state == DocumentState::Modified;
         let is_drop_target = drop_target_index == Some(idx);
 
-        let title = meta.title.clone();
+        let title = strip_group_prefix(&meta.title, meta.group.as_deref());
+        let band_text_color = cx.theme().background;
 
         let tab_manager = self.tab_manager.clone();
 
@@ -292,17 +411,31 @@ impl TabBar {
 
         let center_x = self.active_tab_center_x.clone();
 
-        div()
-            .id(ElementId::Name(format!("tab-{}", id.0).into()))
+        let band = div()
+            .h(TAB_GROUP_BAND)
+            .w_full()
+            .px(Spacing::SM)
+            .flex()
+            .items_center()
+            .overflow_hidden()
+            .when_some(band.color, |el, color| el.bg(color))
+            .when_some(band.label, |el, label| {
+                el.child(
+                    div()
+                        .flex_1()
+                        .truncate()
+                        .child(MonoCaption::new(label).color(band_text_color)),
+                )
+            });
+
+        let row = div()
             .relative()
-            .h_full()
-            .min_w(px(100.0))
-            .max_w(px(200.0))
+            .flex_1()
+            .w_full()
             .px(Spacing::MD)
             .flex()
             .items_center()
             .gap(Spacing::SM)
-            .cursor_pointer()
             .when(is_active, |el| {
                 let stripe_color = cx.theme().primary;
                 el.bg(cx.theme().tab_bar)
@@ -328,40 +461,6 @@ impl TabBar {
                     )
             })
             .when(!is_active, |el| el.hover(|el| el.bg(cx.theme().secondary)))
-            .when(is_drop_target, |el| {
-                el.border_l_2().border_color(cx.theme().accent)
-            })
-            // Click to activate
-            .on_click({
-                let tab_manager = tab_manager.clone();
-                cx.listener(move |_this, _event, _window, cx| {
-                    tab_manager.update(cx, |mgr, cx| {
-                        mgr.activate(id, cx);
-                    });
-                })
-            })
-            // Middle-click to close
-            .on_mouse_down(MouseButton::Middle, {
-                let tab_manager = tab_manager.clone();
-                cx.listener(move |_this, _event, _window, cx| {
-                    tab_manager.update(cx, |mgr, cx| {
-                        mgr.close(id, cx);
-                    });
-                })
-            })
-            // Right-click for context menu
-            .on_mouse_down(
-                MouseButton::Right,
-                cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
-                    this.context_menu = Some(TabContextMenu {
-                        tab_id: id,
-                        tab_index: idx,
-                        position_x: event.position.x,
-                        selected_index: 0,
-                    });
-                    cx.notify();
-                }),
-            )
             // Icon
             .child(Icon::new(icon).size(Heights::ICON_SM).color(if is_active {
                 cx.theme().foreground
@@ -396,7 +495,53 @@ impl TabBar {
                 )
             })
             // Spinner or close button
-            .child(self.render_tab_action(id, is_executing, cx))
+            .child(self.render_tab_action(id, is_executing, cx));
+
+        div()
+            .id(ElementId::Name(format!("tab-{}", id.0).into()))
+            .relative()
+            .h_full()
+            .min_w(px(100.0))
+            .max_w(px(200.0))
+            .flex()
+            .flex_col()
+            .cursor_pointer()
+            .when(is_drop_target, |el| {
+                el.border_l_2().border_color(cx.theme().accent)
+            })
+            // Click to activate
+            .on_click({
+                let tab_manager = tab_manager.clone();
+                cx.listener(move |_this, _event, _window, cx| {
+                    tab_manager.update(cx, |mgr, cx| {
+                        mgr.activate(id, cx);
+                    });
+                })
+            })
+            // Middle-click to close
+            .on_mouse_down(MouseButton::Middle, {
+                let tab_manager = tab_manager.clone();
+                cx.listener(move |_this, _event, _window, cx| {
+                    tab_manager.update(cx, |mgr, cx| {
+                        mgr.close(id, cx);
+                    });
+                })
+            })
+            // Right-click for context menu
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &MouseDownEvent, _window, cx| {
+                    this.context_menu = Some(TabContextMenu {
+                        tab_id: id,
+                        tab_index: idx,
+                        position_x: event.position.x,
+                        selected_index: 0,
+                    });
+                    cx.notify();
+                }),
+            )
+            .child(band)
+            .child(row)
     }
 
     fn render_tab_action(
@@ -463,6 +608,41 @@ impl TabBar {
 }
 
 impl EventEmitter<TabBarEvent> for TabBar {}
+
+#[cfg(test)]
+mod group_band_tests {
+    use super::strip_group_prefix;
+
+    #[test]
+    fn title_drops_the_database_the_band_already_shows() {
+        assert_eq!(
+            strip_group_prefix("monixa.customer", Some("monixa")),
+            "customer"
+        );
+    }
+
+    #[test]
+    fn title_keeps_a_schema_that_is_not_the_database() {
+        // PostgreSQL: the band says `app`, the title still needs `public`.
+        assert_eq!(
+            strip_group_prefix("public.users", Some("app")),
+            "public.users"
+        );
+    }
+
+    #[test]
+    fn title_is_untouched_without_a_group_or_when_only_the_prefix_matches() {
+        assert_eq!(
+            strip_group_prefix("monixa.customer", None),
+            "monixa.customer"
+        );
+        assert_eq!(strip_group_prefix("monixa", Some("monixa")), "monixa");
+        assert_eq!(
+            strip_group_prefix("monixa_old.customer", Some("monixa")),
+            "monixa_old.customer"
+        );
+    }
+}
 
 #[derive(Clone, Debug)]
 pub enum TabBarEvent {

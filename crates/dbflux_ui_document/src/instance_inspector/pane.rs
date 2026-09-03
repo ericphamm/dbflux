@@ -43,6 +43,7 @@ impl InspectorPanel {
                         state: d.state(),
                         closable: true,
                         connection_id: d.connection_id(),
+                        group: None,
                     }
                 })
             },

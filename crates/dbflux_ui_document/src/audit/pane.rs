@@ -54,6 +54,7 @@ impl AuditDocument {
                         state: d.state(),
                         closable: true,
                         connection_id: None,
+                        group: None,
                     }
                 })
             },
