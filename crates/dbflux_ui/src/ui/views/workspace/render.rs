@@ -955,12 +955,18 @@ impl Render for Workspace {
             // Tab context menu rendered at workspace level for proper positioning
             .when_some(tab_context_menu, |this, menu| {
                 use crate::ui::components::context_menu as ctx;
-                use crate::ui::document::tab_bar::TabBar;
+                use crate::ui::document::tab_bar::{
+                    TAB_BAR_TOTAL_HEIGHT, TAB_MENU_WIDTH, TabBar, clamp_tab_menu_left,
+                };
 
                 let tab_bar_entity = self.tab_bar.clone();
 
-                let menu_x = menu.position_x;
-                let menu_y = px(36.0);
+                let menu_x = clamp_tab_menu_left(
+                    menu.position_x,
+                    TAB_MENU_WIDTH,
+                    window.viewport_size().width,
+                );
+                let menu_y = TAB_BAR_TOTAL_HEIGHT;
                 let items = TabBar::build_tab_menu_items();
                 let selected = menu.selected_index;
 

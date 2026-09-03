@@ -34,7 +34,9 @@ impl DataDocument {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let title = table.qualified_name();
+        // Just the object name: the tab bar's band above the tab carries the
+        // database, so a qualified title would print it twice.
+        let title = table.name.clone();
         let data_grid = cx.new(|cx| {
             DataGridPanel::new_for_table(profile_id, table, database, app_state, window, cx)
         });
@@ -49,7 +51,7 @@ impl DataDocument {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let title = collection.qualified_name();
+        let title = collection.name.clone();
         let data_grid = cx.new(|cx| {
             DataGridPanel::new_for_collection(profile_id, collection, app_state, window, cx)
         });
@@ -204,7 +206,13 @@ impl DataDocument {
     /// siblings. Query results are not tied to one database and get `None`.
     pub fn group_label(&self, cx: &App) -> Option<String> {
         match self.data_grid.read(cx).source() {
-            DataSource::Table { database, .. } => database.clone(),
+            // Servers that address one database per connection (MySQL and
+            // friends) leave `database` unset and carry the database in the
+            // table's schema instead, so fall back to it rather than leaving
+            // those tabs ungrouped.
+            DataSource::Table {
+                database, table, ..
+            } => database.clone().or_else(|| table.schema.clone()),
             DataSource::Collection { collection, .. } => Some(collection.database.clone()),
             DataSource::QueryResult { .. } => None,
         }

@@ -17,6 +17,32 @@ use uuid::Uuid;
 
 const TAB_BAR_HEIGHT: Pixels = Heights::TAB;
 
+/// Full height of the bar, band included. The workspace anchors the tab
+/// context menu just below it, so this has to be one value rather than a
+/// literal repeated at the call site — the band changed the height once
+/// already and left the menu overlapping the toolbar.
+pub const TAB_BAR_TOTAL_HEIGHT: Pixels = px(52.0);
+
+/// Width the tab context menu is assumed to take when deciding whether it
+/// fits. The menu itself is min-width driven, so this is the floor plus room
+/// for the longest label ("Close Tabs to the Right").
+pub const TAB_MENU_WIDTH: Pixels = px(220.0);
+
+/// Space kept between the menu and the window edge.
+const TAB_MENU_EDGE_GAP: Pixels = Spacing::SM;
+
+/// Left edge for the tab context menu opened at `click_x`.
+///
+/// Anchored at the click, pulled left when the menu would otherwise run past
+/// the right edge of the window — right-clicking the last tab used to open a
+/// menu half outside the window, where the items were unreachable.
+pub fn clamp_tab_menu_left(click_x: Pixels, menu_width: Pixels, viewport_width: Pixels) -> Pixels {
+    let rightmost = viewport_width - menu_width - TAB_MENU_EDGE_GAP;
+    // `max` last: in a window narrower than the menu, staying attached to the
+    // left edge beats sliding off the left one.
+    click_x.min(rightmost).max(TAB_MENU_EDGE_GAP)
+}
+
 /// Height of the band above each tab that names the database the tab
 /// belongs to. Every tab gets the band so the bar keeps one height; tabs
 /// without a database leave it blank.
@@ -80,17 +106,14 @@ impl TabGroupBand {
     }
 }
 
-/// The band already names the database, so a title such as `monixa.customer`
-/// would repeat it; show `customer`. Titles that do not start with the
-/// database (PostgreSQL's `public.users` under database `app`) stay as they
-/// are — the schema is information the band does not carry.
-fn strip_group_prefix(title: &str, group: Option<&str>) -> String {
-    group
-        .and_then(|group| title.strip_prefix(group))
-        .and_then(|rest| rest.strip_prefix('.'))
-        .filter(|rest| !rest.is_empty())
-        .unwrap_or(title)
-        .to_string()
+/// What the tab's tooltip says: the band's database and the title together,
+/// so two tabs named `flags` in different databases stay tellable apart on
+/// hover even though the tab itself shows only the object name.
+fn tab_tooltip(title: &str, group: Option<&str>) -> String {
+    match group {
+        Some(group) => format!("{group}.{title}"),
+        None => title.to_string(),
+    }
 }
 
 #[allow(dead_code)]
@@ -387,7 +410,8 @@ impl TabBar {
         let is_dirty = meta.state == DocumentState::Modified;
         let is_drop_target = drop_target_index == Some(idx);
 
-        let title = strip_group_prefix(&meta.title, meta.group.as_deref());
+        let title = meta.title.clone();
+        let tooltip: SharedString = tab_tooltip(&meta.title, meta.group.as_deref()).into();
         let band_text_color = cx.theme().background;
 
         let tab_manager = self.tab_manager.clone();
@@ -467,12 +491,16 @@ impl TabBar {
             } else {
                 cx.theme().muted_foreground
             }))
-            // Title
-            .child(div().flex_1().truncate().child(Self::tab_title_text(
-                title.into(),
-                is_active,
-                cx.theme(),
-            )))
+            // Title. The band above carries the database, so this is the
+            // object name alone; the tooltip restores the qualified form.
+            .child(
+                div()
+                    .id(ElementId::Name(format!("tab-title-{}", id.0).into()))
+                    .flex_1()
+                    .truncate()
+                    .child(Self::tab_title_text(title.into(), is_active, cx.theme()))
+                    .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx)),
+            )
             // Dirty indicator: amber dot when the document has unsaved changes.
             // Shows the change summary in a tooltip on hover.
             .when(is_dirty, |el| {
@@ -611,36 +639,54 @@ impl EventEmitter<TabBarEvent> for TabBar {}
 
 #[cfg(test)]
 mod group_band_tests {
-    use super::strip_group_prefix;
+    use super::{
+        TAB_BAR_HEIGHT, TAB_BAR_TOTAL_HEIGHT, TAB_GROUP_BAND, TAB_MENU_EDGE_GAP,
+        clamp_tab_menu_left, tab_tooltip,
+    };
+    use gpui::px;
 
     #[test]
-    fn title_drops_the_database_the_band_already_shows() {
+    fn total_height_covers_the_bar_and_its_band() {
+        assert_eq!(TAB_BAR_TOTAL_HEIGHT, TAB_BAR_HEIGHT + TAB_GROUP_BAND);
+    }
+
+    #[test]
+    fn menu_opens_at_the_click_when_it_fits() {
         assert_eq!(
-            strip_group_prefix("monixa.customer", Some("monixa")),
-            "customer"
+            clamp_tab_menu_left(px(300.0), px(220.0), px(1200.0)),
+            px(300.0)
         );
     }
 
     #[test]
-    fn title_keeps_a_schema_that_is_not_the_database() {
-        // PostgreSQL: the band says `app`, the title still needs `public`.
+    fn menu_is_pulled_left_of_the_window_edge() {
+        // Right-clicking the last tab of a 1200px window: 1100 + 220 would
+        // put half the menu outside.
         assert_eq!(
-            strip_group_prefix("public.users", Some("app")),
-            "public.users"
+            clamp_tab_menu_left(px(1100.0), px(220.0), px(1200.0)),
+            px(1200.0) - px(220.0) - TAB_MENU_EDGE_GAP
         );
     }
 
     #[test]
-    fn title_is_untouched_without_a_group_or_when_only_the_prefix_matches() {
+    fn menu_stays_attached_to_the_left_edge_in_a_narrow_window() {
         assert_eq!(
-            strip_group_prefix("monixa.customer", None),
-            "monixa.customer"
+            clamp_tab_menu_left(px(80.0), px(220.0), px(200.0)),
+            TAB_MENU_EDGE_GAP
         );
-        assert_eq!(strip_group_prefix("monixa", Some("monixa")), "monixa");
+    }
+
+    #[test]
+    fn tooltip_restores_the_qualified_name() {
         assert_eq!(
-            strip_group_prefix("monixa_old.customer", Some("monixa")),
-            "monixa_old.customer"
+            tab_tooltip("flags", Some("monixa-test")),
+            "monixa-test.flags"
         );
+    }
+
+    #[test]
+    fn tooltip_is_the_bare_title_without_a_group() {
+        assert_eq!(tab_tooltip("query.sql", None), "query.sql");
     }
 }
 
