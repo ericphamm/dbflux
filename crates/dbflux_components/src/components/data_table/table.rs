@@ -188,7 +188,16 @@ impl DataTable {
 }
 
 impl gpui::Render for DataTable {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // A committed inline edit leaves the table without focus; the state
+        // asks for it back here because this is the nearest `Window`.
+        if self
+            .state
+            .update(cx, |state, _| state.take_pending_refocus())
+        {
+            self.state.read(cx).focus_handle().focus(window);
+        }
+
         let state = self.state.read(cx);
         let theme = cx.theme();
 
