@@ -94,6 +94,16 @@ fn global_layer() -> KeymapLayer {
     // the long-standing tabbed-UI idiom (browsers, terminals). Cmd+Tab on
     // macOS is the system app switcher and must not be shadowed.
     layer.bind(KeyChord::new("tab", Modifiers::ctrl()), Command::NextTab);
+    // The browser chord for the same thing, which is what most people reach
+    // for: Cmd+Option+Arrow on macOS, Ctrl+Alt+Arrow elsewhere.
+    layer.bind(
+        KeyChord::new("right", Modifiers::primary_alt()),
+        Command::NextTab,
+    );
+    layer.bind(
+        KeyChord::new("left", Modifiers::primary_alt()),
+        Command::PrevTab,
+    );
     layer.bind(
         KeyChord::new("tab", Modifiers::ctrl_shift()),
         Command::PrevTab,
@@ -689,6 +699,18 @@ fn text_input_layer() -> KeymapLayer {
         Command::SearchDatabases,
     );
 
+    // Switching tabs likewise: a text buffer owning the keyboard is no reason
+    // to be stuck on the tab it is in. `ContextId::TextInput` has no parent
+    // layer, so the global binding does not reach here on its own.
+    layer.bind(
+        KeyChord::new("right", Modifiers::primary_alt()),
+        Command::NextTab,
+    );
+    layer.bind(
+        KeyChord::new("left", Modifiers::primary_alt()),
+        Command::PrevTab,
+    );
+
     // Save must keep working while a text buffer owns the keyboard: the S3
     // object editors report `ContextId::TextInput`, which has no parent
     // layer, so without these bindings Ctrl/Cmd+S is silently dropped.
@@ -893,6 +915,32 @@ mod tests {
             keymap.resolve(ContextId::Global, &chord),
             Some(Command::ToggleCommandPalette)
         );
+    }
+
+    #[test]
+    fn the_browser_chord_switches_tabs_everywhere_it_is_needed() {
+        let keymap = default_keymap();
+        let next = KeyChord::new("right", Modifiers::primary_alt());
+        let previous = KeyChord::new("left", Modifiers::primary_alt());
+
+        for context in [
+            ContextId::Global,
+            ContextId::Editor,
+            ContextId::Sidebar,
+            ContextId::Results,
+            ContextId::TextInput,
+        ] {
+            assert_eq!(
+                keymap.resolve(context, &next),
+                Some(Command::NextTab),
+                "{context:?}"
+            );
+            assert_eq!(
+                keymap.resolve(context, &previous),
+                Some(Command::PrevTab),
+                "{context:?}"
+            );
+        }
     }
 
     #[test]

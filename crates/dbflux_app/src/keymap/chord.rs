@@ -64,6 +64,26 @@ impl Modifiers {
         }
     }
 
+    /// Primary + Alt: Cmd+Option on macOS, Ctrl+Alt elsewhere.
+    pub fn primary_alt() -> Self {
+        #[cfg(target_os = "macos")]
+        {
+            Self {
+                platform: true,
+                alt: true,
+                ..Default::default()
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            Self {
+                ctrl: true,
+                alt: true,
+                ..Default::default()
+            }
+        }
+    }
+
     /// Primary + Shift: Cmd+Shift on macOS, Ctrl+Shift elsewhere.
     pub fn primary_shift() -> Self {
         #[cfg(target_os = "macos")]

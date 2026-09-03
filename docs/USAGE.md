@@ -444,6 +444,8 @@ stay `Ctrl` on all platforms (to avoid clashing with macOS system shortcuts).
 | `Ctrl+n` / `Cmd+n` | New query tab |
 | `Ctrl+w` / `Cmd+w` | Close current tab |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
+| `Ctrl+Alt+Right` / `Cmd+Alt+Right` | Next tab (the browser chord) |
+| `Ctrl+Alt+Left` / `Cmd+Alt+Left` | Previous tab |
 | `Ctrl+1` .. `Ctrl+9` / `Cmd+1` .. `Cmd+9` | Switch to tab N |
 | `Ctrl+o` / `Cmd+o` | Open script file |
 | `Ctrl+Enter` / `Cmd+Enter` | Run query |
