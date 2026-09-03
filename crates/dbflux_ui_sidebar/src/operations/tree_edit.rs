@@ -83,6 +83,43 @@ impl Sidebar {
         cx.notify();
     }
 
+    /// Paint a connection, or clear it back to the automatic colour.
+    ///
+    /// The colour is part of the profile, so this goes through the same
+    /// update-and-save path as any other profile edit and survives a restart.
+    pub(crate) fn set_profile_color(
+        &mut self,
+        item_id: &str,
+        color: Option<dbflux_core::ProfileColor>,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(SchemaNodeId::Profile { profile_id }) = parse_node_id(item_id) else {
+            return;
+        };
+
+        let updated = self.app_state.update(cx, |state, cx| {
+            let mut profile = state
+                .profiles()
+                .iter()
+                .find(|p| p.id == profile_id)?
+                .clone();
+
+            if profile.color == color {
+                return None;
+            }
+
+            profile.color = color;
+            state.update_profile(profile);
+            cx.emit(AppStateChanged);
+            Some(())
+        });
+
+        if updated.is_some() {
+            self.refresh_tree(cx);
+            cx.notify();
+        }
+    }
+
     pub(crate) fn duplicate_profile(&mut self, item_id: &str, cx: &mut Context<Self>) {
         let Some(SchemaNodeId::Profile { profile_id }) = parse_node_id(item_id) else {
             return;

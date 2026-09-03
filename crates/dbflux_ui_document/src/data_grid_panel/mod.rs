@@ -1895,6 +1895,11 @@ impl DataGridPanel {
     }
 
     /// Whether the grid currently renders as a single-row record view.
+    /// The shared application state this panel reads connections from.
+    pub fn app_state(&self) -> &gpui::Entity<AppStateEntity> {
+        &self.app_state
+    }
+
     pub fn record_mode(&self) -> bool {
         self.chrome.record_mode
     }

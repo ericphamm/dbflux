@@ -558,6 +558,15 @@ impl Sidebar {
                     );
                 }
 
+                Self::append_menu_section(
+                    &mut items,
+                    [ContextMenuItem::item(
+                        dbflux_i18n::t!("sidebar.menu.choose_color"),
+                        ContextMenuAction::Submenu(Self::build_color_submenu()),
+                    )
+                    .with_icon(AppIcon::Image)],
+                );
+
                 // Add "Move to..." submenu with available folders
                 let move_to_items = self.build_move_to_submenu(item_id, cx);
                 if !move_to_items.is_empty() {
@@ -1138,6 +1147,29 @@ impl Sidebar {
         }
     }
 
+    /// Builds the "Choose Color" submenu: one entry per palette colour, plus
+    /// the entry that clears the choice.
+    ///
+    /// Colour names come from the catalogue rather than the palette itself,
+    /// so a translated build names them in the user's language.
+    fn build_color_submenu() -> Vec<ContextMenuItem> {
+        let mut items = vec![ContextMenuItem::item(
+            dbflux_i18n::t!("sidebar.menu.color.automatic"),
+            ContextMenuAction::SetProfileColor(None),
+        )];
+
+        items.push(ContextMenuItem::separator());
+
+        for color in dbflux_core::ProfileColor::ALL {
+            items.push(ContextMenuItem::item(
+                crate::labels::profile_color_label(color),
+                ContextMenuAction::SetProfileColor(Some(color)),
+            ));
+        }
+
+        items
+    }
+
     /// Builds the "Move to..." submenu items for a profile or folder.
     fn build_move_to_submenu(&self, item_id: &str, cx: &App) -> Vec<ContextMenuItem> {
         let state = self.app_state.read(cx);
@@ -1580,6 +1612,9 @@ impl Sidebar {
             }
             ContextMenuAction::Duplicate => {
                 self.duplicate_profile(&item_id, cx);
+            }
+            ContextMenuAction::SetProfileColor(color) => {
+                self.set_profile_color(&item_id, color, cx);
             }
             ContextMenuAction::Delete => {
                 if !self.try_dispatch_batch_delete(&item_id, cx) {

@@ -55,6 +55,7 @@ impl AuditDocument {
                         closable: true,
                         connection_id: None,
                         group: None,
+                        group_color: None,
                     }
                 })
             },

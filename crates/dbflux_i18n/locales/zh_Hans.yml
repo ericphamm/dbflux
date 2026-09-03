@@ -3244,6 +3244,17 @@ sidebar:
     import_ellipsis: 导入…
     compare_schema: 对比 Schema…
     move_to: 移动到…
+    choose_color: 选择颜色
+    color:
+      automatic: 自动
+      blue: 蓝色
+      teal: 青色
+      green: 绿色
+      yellow: 黄色
+      orange: 橙色
+      red: 红色
+      purple: 紫色
+      pink: 粉色
     delete: 删除
     delete_count: "删除 %{count} 项"
     close: 关闭

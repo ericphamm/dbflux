@@ -1,8 +1,15 @@
 use super::*;
 use dbflux_components::icons::AppIcon;
-use dbflux_components::primitives::{Icon, StatusDot, StatusDotVariant, Text};
+use dbflux_components::primitives::{Icon, Text};
+use dbflux_components::tokens::ProfileColors;
 use dbflux_components::typography::MonoLabel;
 use gpui::FontWeight;
+
+/// Side of the colour square that stands in for a connection's icon.
+///
+/// Smaller than an icon so the colour reads as a marker beside the name
+/// rather than as a glyph of its own.
+const PROFILE_SQUARE_SIZE: gpui::Pixels = gpui::px(10.0);
 
 fn sidebar_tree_label(
     label: SharedString,
@@ -35,7 +42,16 @@ fn sidebar_tree_label(
 pub(super) struct TreeRenderParams {
     pub connections: Vec<Uuid>,
     pub active_id: Option<Uuid>,
+    /// Driver logo per connection.
+    ///
+    /// Not rendered at the moment: the connection row shows a colour square
+    /// instead, which is where the colour chosen for the connection appears.
+    /// Kept because the mapping from driver metadata to a brand icon is the
+    /// hard part, and a future layout may want the logo back.
+    #[allow(dead_code)]
     pub profile_icons: HashMap<Uuid, AppIcon>,
+    /// Colour the user picked for a connection, if any.
+    pub profile_colors: HashMap<Uuid, dbflux_core::ProfileColor>,
     pub active_databases: HashMap<Uuid, String>,
     pub sidebar_entity: Entity<Sidebar>,
     pub multi_selection: HashSet<String>,
@@ -384,12 +400,20 @@ pub(super) fn render_tree_item(
                                 && unicode_icon.is_empty()
                                 && node_kind == SchemaNodeKind::Profile,
                             |el| {
-                                let dot_variant = if is_connected {
-                                    StatusDotVariant::Success
-                                } else {
-                                    StatusDotVariant::Idle
-                                };
-                                el.child(StatusDot::new(dot_variant))
+                                // A filled square when connected, an outline
+                                // when not: the square has to keep carrying
+                                // the connected/disconnected signal that the
+                                // driver logo used to colour.
+                                el.child(
+                                    div()
+                                        .w(PROFILE_SQUARE_SIZE)
+                                        .h(PROFILE_SQUARE_SIZE)
+                                        .rounded(Radii::SM)
+                                        .when(is_connected, |square| square.bg(icon_color))
+                                        .when(!is_connected, |square| {
+                                            square.border_1().border_color(icon_color)
+                                        }),
+                                )
                             },
                         ),
                 )
@@ -1053,21 +1077,24 @@ fn resolve_node_icon(
         SchemaNodeKind::ConnectionFolder => (Some(AppIcon::Folder), "", theme.muted_foreground),
         SchemaNodeKind::DatabasesFolder => (Some(AppIcon::Database), "", params.color_orange),
         SchemaNodeKind::Profile => {
-            let icon = parsed_id
+            // Deliberately no icon: returning `None` sends the icon slot to
+            // its square branch, which is what carries the connection's
+            // colour. `profile_icons` still holds the driver logo for
+            // whenever a layout wants it back.
+            let _ = profile_icons;
+
+            let color = parsed_id
                 .as_ref()
                 .and_then(|n| n.profile_id())
-                .and_then(|id| profile_icons.get(&id).copied());
+                .and_then(|id| params.profile_colors.get(&id).copied())
+                .map(ProfileColors::resolve)
+                .unwrap_or(if is_connected {
+                    params.color_green
+                } else {
+                    theme.muted_foreground
+                });
 
-            let color = if is_connected {
-                params.color_green
-            } else {
-                theme.muted_foreground
-            };
-
-            // When no driver icon is set, signal that a StatusDot should render
-            // (the icon slot handles this via the `use_status_dot` branch).
-            let unicode = "";
-            (icon, unicode, color)
+            (None, "", color)
         }
         SchemaNodeKind::Database => (Some(AppIcon::Database), "", params.color_orange),
         SchemaNodeKind::Schema => (Some(AppIcon::Layers), "", params.color_schema),

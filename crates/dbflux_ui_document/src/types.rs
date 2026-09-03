@@ -114,4 +114,7 @@ pub struct DocumentMetaSnapshot {
     /// consecutive tabs that share a connection and database under one band
     /// carrying this label, and drops the same prefix from the tab title.
     pub group: Option<String>,
+    /// Colour chosen for the document's connection. When unset the band
+    /// derives one from the connection and database names.
+    pub group_color: Option<dbflux_core::ProfileColor>,
 }

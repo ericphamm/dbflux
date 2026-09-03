@@ -437,6 +437,8 @@ pub enum ContextMenuAction {
     RenameFolder,
     DeleteFolder,
     MoveToFolder(Option<Uuid>),
+    /// Paint this connection with a colour, or clear it back to automatic.
+    SetProfileColor(Option<dbflux_core::ProfileColor>),
     // Schema object SQL generation
     GenerateIndexSql(IndexSqlAction),
     GenerateForeignKeySql(ForeignKeySqlAction),
@@ -545,6 +547,9 @@ impl ContextMenuAction {
             Self::Refresh => Some(AppIcon::RefreshCcw),
             Self::Edit => Some(AppIcon::Pencil),
             Self::Duplicate => Some(AppIcon::Copy),
+            // The icon set has no palette or paint glyph, and adding an
+            // asset for one menu row is not worth it.
+            Self::SetProfileColor(_) => Some(AppIcon::Image),
             Self::Delete => Some(AppIcon::Delete),
             Self::Export => Some(AppIcon::ArrowUp),
             Self::OpenDatabase => Some(AppIcon::Database),

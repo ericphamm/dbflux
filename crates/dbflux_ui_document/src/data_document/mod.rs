@@ -218,6 +218,21 @@ impl DataDocument {
         }
     }
 
+    /// Colour the user picked for this document's connection, if any.
+    ///
+    /// The tab band prefers it over the colour it derives from the names, so
+    /// the band and the connection's square in the sidebar always agree.
+    pub fn group_color(&self, cx: &App) -> Option<dbflux_core::ProfileColor> {
+        let profile_id = self.connection_id(cx)?;
+        let grid = self.data_grid.read(cx);
+        grid.app_state()
+            .read(cx)
+            .profiles()
+            .iter()
+            .find(|profile| profile.id == profile_id)
+            .and_then(|profile| profile.color)
+    }
+
     pub fn connection_id(&self, cx: &App) -> Option<Uuid> {
         match self.data_grid.read(cx).source() {
             DataSource::Table { profile_id, .. } => Some(*profile_id),

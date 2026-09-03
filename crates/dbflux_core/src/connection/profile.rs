@@ -1314,6 +1314,61 @@ pub fn strip_password_from_uri(uri: &str) -> (String, Option<String>) {
     )
 }
 
+/// A colour the user picked for a connection.
+///
+/// Stored as a name rather than a colour value so the palette stays a UI
+/// concern: the core records "this connection is teal", and each theme
+/// decides what teal looks like. That also keeps a user's choice readable on
+/// both light and dark backgrounds, which a raw hex could not promise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProfileColor {
+    Blue,
+    Teal,
+    Green,
+    Yellow,
+    Orange,
+    Red,
+    Purple,
+    Pink,
+}
+
+impl ProfileColor {
+    /// Every colour, in the order a picker should offer them.
+    pub const ALL: [Self; 8] = [
+        Self::Blue,
+        Self::Teal,
+        Self::Green,
+        Self::Yellow,
+        Self::Orange,
+        Self::Red,
+        Self::Purple,
+        Self::Pink,
+    ];
+
+    /// Stable identifier used in storage. Changing one of these strings
+    /// silently drops the colour of every connection that used it.
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Blue => "blue",
+            Self::Teal => "teal",
+            Self::Green => "green",
+            Self::Yellow => "yellow",
+            Self::Orange => "orange",
+            Self::Red => "red",
+            Self::Purple => "purple",
+            Self::Pink => "pink",
+        }
+    }
+
+    /// Parse a stored identifier, or `None` for anything unrecognised — an
+    /// older or newer build's value is treated as "no colour chosen" rather
+    /// than failing the whole profile load.
+    pub fn from_id(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|color| color.id() == value)
+    }
+}
+
 /// Saved connection profile.
 ///
 /// Persisted to disk as JSON. Passwords are stored separately in the
@@ -1399,6 +1454,12 @@ pub struct ConnectionProfile {
     /// Defaults to `false`.
     #[serde(default)]
     pub read_only_flag: bool,
+
+    /// Colour shown in the sidebar and in the band above this connection's
+    /// tabs. `None` means the band falls back to a colour derived from the
+    /// connection and database names.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<ProfileColor>,
 }
 
 impl ConnectionProfile {
@@ -1421,6 +1482,7 @@ impl ConnectionProfile {
             access_kind: None,
             mcp_governance: None,
             read_only_flag: false,
+            color: None,
         }
     }
 
@@ -1445,6 +1507,7 @@ impl ConnectionProfile {
             value_refs: HashMap::new(),
             access_kind: None,
             read_only_flag: false,
+            color: None,
             mcp_governance: None,
         }
     }
@@ -1473,6 +1536,7 @@ impl ConnectionProfile {
             access_kind: None,
             mcp_governance: None,
             read_only_flag: false,
+            color: None,
         }
     }
 
@@ -1506,6 +1570,7 @@ impl ConnectionProfile {
             access_kind: None,
             mcp_governance: None,
             read_only_flag: false,
+            color: None,
         }
     }
 
@@ -1699,6 +1764,28 @@ mod tests {
     use super::*;
     use crate::RefreshPolicySetting;
     use crate::config::app::GlobalOverrides;
+
+    #[test]
+    fn profile_color_ids_round_trip_and_are_unique() {
+        let mut seen = std::collections::HashSet::new();
+
+        for color in ProfileColor::ALL {
+            let id = color.id();
+            assert!(seen.insert(id), "duplicate colour id {id}");
+            assert_eq!(
+                ProfileColor::from_id(id),
+                Some(color),
+                "{id} must parse back to the colour it names"
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_profile_color_is_treated_as_unset() {
+        // A value written by another build must not fail the profile load.
+        assert_eq!(ProfileColor::from_id("chartreuse"), None);
+        assert_eq!(ProfileColor::from_id(""), None);
+    }
     use crate::driver::form::FormValues;
     use crate::values::ValueRef;
 

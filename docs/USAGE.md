@@ -90,6 +90,14 @@ Switch between the two tabs with `q` or `e`.
 - `r` refreshes the schema; `d` disconnects the active connection.
 - `m` opens the context menu for the selected item.
 
+### Colouring a connection
+
+Right-click a connection and pick **Choose Color** to mark it. The colour shows
+as the square beside the connection's name, replacing the driver logo, and as
+the band above that connection's tabs, so a query against production is
+recognisable at a glance. **Automatic** clears the choice and the band goes back
+to a colour derived from the connection and database names.
+
 ### Finding a table anywhere
 
 `Ctrl+P` (`Cmd+P` on macOS) opens a search across every connected database at

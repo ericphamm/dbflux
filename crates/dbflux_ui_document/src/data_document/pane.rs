@@ -60,6 +60,7 @@ impl DataDocument {
                         closable: true,
                         connection_id: d.connection_id(cx),
                         group: d.group_label(cx),
+                        group_color: d.group_color(cx),
                     }
                 })
             },

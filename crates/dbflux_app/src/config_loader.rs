@@ -332,7 +332,7 @@ pub fn save_profiles(
             driver_id: Some(profile.driver_id()),
             description: None,
             favorite: false,
-            color: None,
+            color: profile.color.map(|color| color.id().to_string()),
             icon: None,
             save_password: profile.save_password,
             kind: Some(db_kind_to_str(profile.kind())),
@@ -1688,6 +1688,10 @@ fn load_profiles(
                 access_kind,
                 mcp_governance,
                 read_only_flag: false,
+                color: dto
+                    .color
+                    .as_deref()
+                    .and_then(dbflux_core::ProfileColor::from_id),
             })
         })
         .collect()

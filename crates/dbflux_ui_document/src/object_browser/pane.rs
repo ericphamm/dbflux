@@ -85,6 +85,7 @@ impl ObjectBrowserDocument {
                         closable: true,
                         connection_id: d.connection_id(),
                         group: None,
+                        group_color: None,
                     }
                 })
             },

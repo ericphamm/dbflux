@@ -100,6 +100,14 @@ Cambia entre las dos pestañas con `q` o `e`.
 - `r` refresca el schema; `d` desconecta la conexión activa.
 - `m` abre el menú contextual del elemento seleccionado.
 
+### Colorear una conexión
+
+Haz clic derecho en una conexión y elige **Elegir color** para marcarla. El color
+aparece en el cuadrado junto al nombre de la conexión, en lugar del logo del
+driver, y en la banda sobre las pestañas de esa conexión, así una consulta contra
+producción se reconoce de un vistazo. **Automático** borra la elección y la banda
+vuelve al color derivado de los nombres de la conexión y la base de datos.
+
 ### Encontrar una tabla en cualquier sitio
 
 `Ctrl+P` (`Cmd+P` en macOS) abre una búsqueda sobre todas las bases de datos

@@ -3356,6 +3356,17 @@ sidebar:
     import_ellipsis: Importar…
     compare_schema: Comparar esquema…
     move_to: Mover a...
+    choose_color: Elegir color
+    color:
+      automatic: Automático
+      blue: Azul
+      teal: Turquesa
+      green: Verde
+      yellow: Amarillo
+      orange: Naranja
+      red: Rojo
+      purple: Morado
+      pink: Rosa
     delete: Eliminar
     delete_count: "Eliminar %{count} elementos"
     close: Cerrar
