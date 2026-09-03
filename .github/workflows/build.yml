@@ -481,6 +481,61 @@ jobs:
 
           chmod +x "$APP_BUNDLE/Contents/MacOS/dbflux"
 
+      # Signing the bundle, not just the artifact. macOS ties a keychain grant
+      # to the signature of the application that asked for it, so an app whose
+      # signature changes with every release makes the user re-authorise their
+      # saved passwords after each update. A certificate that stays the same
+      # across releases is what stops that.
+      #
+      # Without the secrets the bundle is signed ad-hoc, which is what shipped
+      # before and keeps the release working; the secrets are read inside the
+      # script because a workflow `if:` may not reference them.
+      - name: Sign app bundle
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+        run: |
+          set -euo pipefail
+          APP_BUNDLE="$APP_NAME.app"
+
+          if [ -z "${MACOS_CERTIFICATE_P12:-}" ]; then
+            echo "::notice::no signing certificate configured — signing ad-hoc"
+            codesign --force --deep --sign - --identifier "$BUNDLE_ID" "$APP_BUNDLE"
+            codesign --verify --deep --strict "$APP_BUNDLE"
+            exit 0
+          fi
+
+          # A throwaway keychain, unlocked for this job only, so the runner's
+          # default keychain is left alone.
+          keychain="$RUNNER_TEMP/dbflux-signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          certificate="$RUNNER_TEMP/certificate.p12"
+
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$certificate"
+
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" -k "$keychain" \
+            -P "${MACOS_CERTIFICATE_PASSWORD:-}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+
+          rm -f "$certificate"
+
+          identity="${MACOS_SIGN_IDENTITY:-}"
+          if [ -z "$identity" ]; then
+            identity="$(security find-identity -v -p codesigning "$keychain" \
+              | sed -n '1s/.*"\(.*\)"/\1/p')"
+          fi
+
+          echo "signing as $identity"
+          codesign --force --deep --timestamp --options runtime \
+            --sign "$identity" --identifier "$BUNDLE_ID" "$APP_BUNDLE"
+          codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+
       - name: Install create-dmg
         run: brew install create-dmg
 

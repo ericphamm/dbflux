@@ -189,6 +189,47 @@ when no signature is present:
 gh attestation verify dbflux-macos-arm64.dmg --repo <owner>/dbflux
 ```
 
+## macOS Code Signing
+
+This is a different thing from the GPG signature above, and it solves a
+different problem. GPG signs the *file* you download. Code signing signs the
+*application*, and macOS uses that signature to decide whether a keychain grant
+still applies.
+
+Without it, every release is a new, unrecognised application: the first time a
+user connects after updating, macOS asks for their login password before
+DBFlux may read the saved database passwords it stored earlier. Signing each
+release with the same certificate makes that prompt appear once rather than
+after every update.
+
+Three optional repository secrets turn it on:
+
+- `MACOS_CERTIFICATE_P12` — the certificate and its private key, as a
+  base64-encoded `.p12`
+- `MACOS_CERTIFICATE_PASSWORD` — the password the `.p12` was exported with
+- `MACOS_SIGN_IDENTITY` — the identity name, when the `.p12` holds more than
+  one
+
+When `MACOS_CERTIFICATE_P12` is absent the bundle is signed ad-hoc, which is
+what the build did before and keeps releases working.
+
+A self-signed certificate is enough for the keychain. Create one on a Mac with
+`scripts/create-signing-cert.sh`, then export it for the workflow:
+
+```bash
+security export -k ~/Library/Keychains/login.keychain-db \
+  -t identities -f pkcs12 -o dbflux-signing.p12
+base64 -i dbflux-signing.p12 | pbcopy
+```
+
+Paste that as `MACOS_CERTIFICATE_P12` and put the export password in
+`MACOS_CERTIFICATE_PASSWORD`. Keep the `.p12` out of the repository.
+
+What a self-signed certificate does **not** do is satisfy Gatekeeper. The app
+is still unidentified on first launch, and users still open it once from the
+context menu. Removing that step needs a paid Apple Developer ID certificate
+and notarisation, which the same two secrets would carry if you ever get one.
+
 ## How Nightly Works
 
 `.github/workflows/nightly.yml` runs daily at 03:17 UTC:

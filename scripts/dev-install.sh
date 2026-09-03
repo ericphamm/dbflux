@@ -26,6 +26,7 @@ set -euo pipefail
 FEATURES="sqlite,postgres,mysql,mssql,mongodb,redis,dynamodb,cloudwatch,influxdb,redshift,s3,aws"
 APP="${DBFLUX_APP:-/Applications/DBFlux Local.app}"
 BUNDLE_ID="dev.dbflux.local"
+SIGN_IDENTITY="${DBFLUX_SIGN_IDENTITY:-DBFlux Dev}"
 
 profile="debug"
 build=1
@@ -77,8 +78,19 @@ if [[ -n "$version" ]]; then
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $version" "$APP/Contents/Info.plist" >/dev/null
 fi
 
-echo "==> codesign (ad-hoc)"
-codesign --force --sign - --identifier "$BUNDLE_ID" "$APP"
+# Sign with a real identity when one exists. An ad-hoc signature is tied to
+# the exact binary, so the keychain treats every rebuild as a new application
+# and asks for permission again; a stable identity is what makes "Always
+# Allow" hold. `scripts/create-signing-cert.sh` creates one.
+if security find-identity -v -p codesigning 2>/dev/null | grep -q "\"$SIGN_IDENTITY\""; then
+  echo "==> codesign ($SIGN_IDENTITY)"
+  codesign --force --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID" "$APP"
+else
+  echo "==> codesign (ad-hoc)"
+  codesign --force --sign - --identifier "$BUNDLE_ID" "$APP"
+  echo "    note: the keychain will ask for your password after every install."
+  echo "    Run scripts/create-signing-cert.sh once to stop that."
+fi
 codesign --verify --deep --strict "$APP"
 
 echo
