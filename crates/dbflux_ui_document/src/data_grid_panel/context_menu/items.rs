@@ -16,6 +16,7 @@ fn action_shortcut(action: ContextMenuAction) -> Option<SharedString> {
         ContextMenuAction::Edit => Command::Rename,
         ContextMenuAction::AddRow => Command::ResultsAddRow,
         ContextMenuAction::DeleteRow => Command::Delete,
+        ContextMenuAction::ToggleRecordView => Command::ToggleRecordView,
         _ => return None,
     };
 
@@ -224,6 +225,19 @@ fn build_menu_items(
         });
 
         if has_row_target {
+            // Two ways to look at one row, and they are different enough to
+            // both be listed: the record view replaces the grid with this
+            // row's fields, the inspector opens a rail with the row plus the
+            // column's metadata.
+            items.push(ContextMenuItem {
+                label: dbflux_i18n::t!("document.data.context_menu.item.switch_view").into(),
+                action: Some(ContextMenuAction::ToggleRecordView),
+                icon: Some(AppIcon::Rows3),
+                is_separator: false,
+                is_danger: false,
+                shortcut: None,
+            });
+
             if inspect_row_enabled {
                 items.push(ContextMenuItem {
                     label: dbflux_i18n::t!("document.data.context_menu.item.inspect_row").into(),

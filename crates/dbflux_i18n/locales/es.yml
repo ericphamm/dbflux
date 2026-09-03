@@ -1025,6 +1025,7 @@ document:
         set_null: Establecer NULL
         add_row: Agregar fila
         inspect_row: Inspeccionar fila
+        switch_view: Cambiar vista
         view_value: Ver valor
         duplicate_row: Duplicar fila
         delete_row: Eliminar fila

@@ -75,6 +75,8 @@ actions!(
         // Undo/Redo
         Undo,
         Redo,
+        // Grid <-> record view
+        SwitchView,
     ]
 );
 
@@ -137,6 +139,11 @@ pub fn init(cx: &mut App) {
         // every platform; this isn't a system-standard shortcut and reusing
         // Cmd+N on macOS would clash with NewQueryTab.
         KeyBinding::new("ctrl-n", SetNull, Some(CONTEXT_WITHOUT_INPUT)),
+        // Grid <-> record view. Registered as a native binding rather than
+        // left to the app's KeymapStack because gpui-component binds `tab` to
+        // its own focus-cycling action in the "Root" context; only a deeper
+        // context wins, and "Results" is deeper.
+        KeyBinding::new("tab", SwitchView, Some(CONTEXT_WITHOUT_INPUT)),
         // Undo/Redo: standard Cmd/Ctrl variants via `secondary-`, plus
         // vim-style `u` / `ctrl-r` kept literal as familiar editor aliases.
         KeyBinding::new("u", Undo, Some(CONTEXT_WITHOUT_INPUT)),
@@ -408,6 +415,13 @@ impl gpui::Render for DataTable {
         };
 
         let s = self.state.clone();
+        let on_switch_view = move |_: &SwitchView, _: &mut Window, cx: &mut App| {
+            s.update(cx, |_state, cx| {
+                cx.emit(DataTableEvent::SwitchViewRequested);
+            });
+        };
+
+        let s = self.state.clone();
         let on_undo = move |_: &Undo, _: &mut Window, cx: &mut App| {
             s.update(cx, |state, cx| {
                 // Stop editing before undo to avoid stale visual index references
@@ -586,6 +600,7 @@ impl gpui::Render for DataTable {
             .on_action(on_duplicate_row)
             .on_action(on_set_null)
             // Undo/Redo
+            .on_action(on_switch_view)
             .on_action(on_undo)
             .on_action(on_redo)
             // Column resize: move and up handlers on the root div so the drag

@@ -2350,6 +2350,9 @@ impl DataGridPanel {
                     DataTableEvent::AddRowRequested(row) => {
                         this.handle_add_row(*row, false, cx);
                     }
+                    DataTableEvent::SwitchViewRequested => {
+                        this.set_record_mode(!this.record_mode(), cx);
+                    }
                     DataTableEvent::DuplicateRowRequested(row) => {
                         this.handle_duplicate_row(*row, false, cx);
                     }

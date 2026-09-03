@@ -996,6 +996,7 @@ document:
         set_null: 设为 NULL
         add_row: 添加行
         inspect_row: 检查行
+        switch_view: 切换视图
         view_value: 查看值
         duplicate_row: 复制行
         delete_row: 删除行

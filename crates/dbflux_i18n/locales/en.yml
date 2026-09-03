@@ -1025,6 +1025,7 @@ document:
         set_null: Set to NULL
         add_row: Add Row
         inspect_row: Inspect Row
+        switch_view: Switch View
         view_value: View Value
         duplicate_row: Duplicate Row
         delete_row: Delete Row

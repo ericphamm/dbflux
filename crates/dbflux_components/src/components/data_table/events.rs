@@ -114,6 +114,9 @@ pub enum ContextMenuAction {
     RemoveOrdering,
     /// Open the row inspector panel for the selected row.
     InspectRow,
+    /// Switch the result area between the grid and the record view, which
+    /// shows one row with a field per line.
+    ToggleRecordView,
     /// Open a new ChartDocument seeded with the current query and result columns.
     ChartThisQuery,
 }
@@ -133,6 +136,12 @@ pub enum DataTableEvent {
 
     /// Request to save changes for a row.
     SaveRowRequested(usize),
+
+    /// The user asked to switch between the grid and the record view.
+    ///
+    /// The flag itself lives on the host panel, which re-applies it whenever
+    /// it rebuilds the table, so the table asks rather than deciding.
+    SwitchViewRequested,
 
     /// Request to show context menu at a position.
     ContextMenuRequested {

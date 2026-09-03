@@ -476,9 +476,17 @@ fn results_layer() -> KeymapLayer {
         KeyChord::new("y", Modifiers::none()),
         Command::ResultsCopyRow,
     );
-    // Tab, not `i`: the record view is how a single row is inspected, and
-    // Tab is the key that reads as "show me this one". It shadows the global
-    // focus cycle while the grid has focus.
+    // Tab, not `i`: the record view is how a single row is read, and Tab is
+    // the key that reads as "show me this one".
+    //
+    // Retained here as a label source only. `gpui-component` binds `tab` to
+    // its own focus-cycling action in the "Root" context, which is an
+    // ancestor of everything, so a KeyChord entry here never fires — the
+    // keystroke is claimed before the workspace's key handler sees it. Actual
+    // dispatch is the native `SwitchView` binding in
+    // `dbflux_components::components::data_table`, registered in the deeper
+    // "Results" context so it wins. This entry is what puts "Tab" beside
+    // "Switch View" in the context menu.
     layer.bind(
         KeyChord::new("tab", Modifiers::none()),
         Command::ToggleRecordView,
@@ -1067,7 +1075,8 @@ mod tests {
         assert_eq!(
             keymap.resolve(ContextId::Results, &tab),
             Some(Command::ToggleRecordView),
-            "Tab inspects the current row in the grid"
+            "Tab switches the grid to the record view — the label the context \
+             menu shows comes from this entry"
         );
         assert_eq!(
             keymap.resolve(ContextId::Editor, &tab),

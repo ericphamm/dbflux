@@ -1640,6 +1640,9 @@ impl DataGridPanel {
             ContextMenuAction::InspectRow => {
                 self.open_row_inspector(menu.row, menu.col, cx);
             }
+            ContextMenuAction::ToggleRecordView => {
+                self.set_record_mode(!self.record_mode(), cx);
+            }
             ContextMenuAction::ChartThisQuery => {
                 let query = self.chart_host_current_query(cx);
                 let connection_id = self.chart_host_connection_id(cx);
