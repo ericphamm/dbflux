@@ -13,8 +13,8 @@ use dbflux_components::tokens::ChromeColors;
 #[cfg(target_os = "linux")]
 use dbflux_components::tokens::{Heights, Spacing};
 use gpui::{
-    App, IntoElement, SharedString, Stateful, Window, WindowDecorations, WindowKind, WindowOptions,
-    div, px,
+    App, IntoElement, SharedString, Stateful, TitlebarOptions, Window, WindowDecorations,
+    WindowKind, WindowOptions, div, px,
 };
 // Only the CSD title bar uses these, and it is compiled on Linux alone.
 #[cfg(target_os = "linux")]
@@ -48,6 +48,32 @@ pub const MACOS_TRAFFIC_LIGHT_POSITION: gpui::Point<gpui::Pixels> = gpui::Point 
 /// Width kept clear on the left of the macOS title bar for the traffic lights.
 #[cfg(target_os = "macos")]
 const MACOS_TRAFFIC_LIGHT_INSET: gpui::Pixels = px(78.0);
+
+/// Titlebar options for a top-level window.
+///
+/// macOS hides the system title so the workspace can draw a centred one and
+/// moves the traffic lights down into that bar; every other platform keeps its
+/// native titlebar as it is. Built here rather than at the call site because
+/// the two platforms fill in different fields, and a struct update that covers
+/// every field on one platform and not the other does not compile clean on
+/// both.
+pub fn titlebar_options(title: impl Into<SharedString>) -> TitlebarOptions {
+    #[cfg(target_os = "macos")]
+    {
+        TitlebarOptions {
+            title: Some(title.into()),
+            appears_transparent: true,
+            traffic_light_position: Some(MACOS_TRAFFIC_LIGHT_POSITION),
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        TitlebarOptions {
+            title: Some(title.into()),
+            ..Default::default()
+        }
+    }
+}
 
 /// The app-drawn title bar for macOS, with the title centred in the window.
 ///
