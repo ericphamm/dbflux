@@ -401,16 +401,7 @@ fn run_gui() {
         let channel = dbflux_core::ReleaseChannel::current();
         let mut main_window_options = WindowOptions {
             app_id: Some(channel.app_id().into()),
-            titlebar: Some(TitlebarOptions {
-                title: Some(channel.display_name().into()),
-                // macOS: hide the system title so the workspace can draw a
-                // centred one, and drop the traffic lights into that bar.
-                #[cfg(target_os = "macos")]
-                appears_transparent: true,
-                #[cfg(target_os = "macos")]
-                traffic_light_position: Some(platform::MACOS_TRAFFIC_LIGHT_POSITION),
-                ..Default::default()
-            }),
+            titlebar: Some(platform::titlebar_options(channel.display_name())),
             // Request client-side decorations on Linux to enable native Wayland support.
             // On other platforms this returns Server explicitly.
             window_decorations: platform::main_window_decoration_request(),
