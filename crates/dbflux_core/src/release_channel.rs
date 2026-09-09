@@ -41,20 +41,25 @@ impl ReleaseChannel {
     /// instead of sharing its taskbar entry and icon association.
     pub fn app_id(self) -> &'static str {
         match self {
-            Self::Nightly => "dbflux-nightly",
-            Self::Stable | Self::Rc => "dbflux",
+            Self::Nightly => "dbspeed-nightly",
+            Self::Stable | Self::Rc => "dbspeed",
         }
     }
 
     /// Human-facing application name used for window titles and bundle metadata.
     pub fn display_name(self) -> &'static str {
         match self {
-            Self::Nightly => "DBFlux Nightly",
-            Self::Stable | Self::Rc => "DBFlux",
+            Self::Nightly => "DBSpeed Nightly",
+            Self::Stable | Self::Rc => "DBSpeed",
         }
     }
 
     /// File name of the unified SQLite database inside the data directory.
+    ///
+    /// This deliberately keeps the `dbflux` name although the application is
+    /// distributed as DBSpeed: the data directory, this file and the keychain
+    /// service are what an installed copy already has on disk, and renaming
+    /// them would make every existing user start with empty connections.
     ///
     /// Nightly uses a separate database so a migration that breaks on a
     /// pre-release build cannot corrupt the stable database of a user who runs

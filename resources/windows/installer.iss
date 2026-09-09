@@ -1,19 +1,19 @@
 ; Values are read from the environment so the build workflow does not pass them
 ; through the Inno-Setup-Action `options` input. Forwarding /D defines whose
-; values contain spaces (e.g. "DBFlux Nightly") breaks under the action's
+; values contain spaces (e.g. "DBSpeed Nightly") breaks under the action's
 ; argument splitting, making ISCC mistake the rest for a second script filename.
 #ifndef MyAppName
 #define MyAppName GetEnv("DBFLUX_APP_NAME")
 #if MyAppName == ""
 #undef MyAppName
-#define MyAppName "DBFlux"
+#define MyAppName "DBSpeed"
 #endif
 #endif
 #ifndef MyAppId
 #define MyAppId GetEnv("DBFLUX_APP_ID")
 #if MyAppId == ""
 #undef MyAppId
-#define MyAppId "{{D8A3E981-6A8D-4B8F-9E09-86D8DEB7A6F1}"
+#define MyAppId "{{4F0B2C6A-9D1E-4B7A-8C3F-2E5D7A9B1C43}"
 #endif
 #endif
 #ifndef MyAppVersion
@@ -23,8 +23,8 @@
 #define MyAppVersion "0.9.0-rc.0"
 #endif
 #endif
-#define MyAppPublisher "Ignacio Perez"
-#define MyAppURL "https://github.com/0xErwin1/dbflux"
+#define MyAppPublisher "Eric Pham"
+#define MyAppURL "https://github.com/ericphamm/dbflux"
 #define MyAppExeName "dbflux.exe"
 
 [Setup]
@@ -39,7 +39,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=LICENSE-MIT
 OutputDir=output
-OutputBaseFilename=dbflux-windows-amd64-setup
+OutputBaseFilename=dbspeed-windows-amd64-setup
 SetupIconFile=dbflux.ico
 Compression=lzma2
 SolidCompression=yes

@@ -15,7 +15,7 @@
     <key>CFBundleExecutable</key>
     <string>dbflux</string>
     <key>CFBundleIconFile</key>
-    <string>DBFlux</string>
+    <string>DBSpeed</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>

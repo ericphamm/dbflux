@@ -1249,7 +1249,7 @@ runtime necesita:
 
 **Assets de branding**: las marcas de marca a color completo viven bajo
 `resources/branding/{stable,nightly}/` (`mark.svg`, `mark-256.png`,
-`mark-small.svg`, `wordmark.svg`) más el `resources/branding/glyph.svg`
+`mark-small.svg`) más el `resources/branding/glyph.svg`
 compartido. `crates/dbflux_ui/src/assets.rs` sirve la marca PNG pre-renderizada
 por channel para `img(...)`. La metadata de packaging (`packaging/*.yaml`,
 `resources/desktop/dbflux.desktop`, `resources/macos/Info.plist`,

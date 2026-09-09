@@ -183,10 +183,10 @@ fn validate_client_id(
             "Client ID '{}' is not registered as a trusted client.\n\
              \n\
              To fix this:\n\
-             1. Open DBFlux GUI and go to Settings → MCP → Clients\n\
+             1. Open DBSpeed GUI and go to Settings → MCP → Clients\n\
              2. Add a new trusted client with ID '{}'\n\
              \n\
-             Or insert a trusted client row into the DBFlux settings database:\n\
+             Or insert a trusted client row into the DBSpeed settings database:\n\
              {}\n\
              \n\
              Table: cfg_trusted_clients",

@@ -3397,7 +3397,7 @@ mod tests {
     #[::core::prelude::v1::test]
     fn dangling_keyring_only_message_references_credentials_file() {
         let msg = format!(
-            "Auth profile '{}' is only in the DBFlux keyring and no longer has a \
+            "Auth profile '{}' is only in the DBSpeed keyring and no longer has a \
              corresponding entry in ~/.aws/config or ~/.aws/credentials. \
              Add the credentials to ~/.aws/credentials to connect with this profile.",
             "legacy-key"

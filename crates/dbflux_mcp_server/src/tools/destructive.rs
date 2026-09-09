@@ -22,7 +22,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct DeleteRecordsParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table or collection name")]
@@ -37,7 +37,7 @@ pub struct DeleteRecordsParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TruncateTableParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table name to truncate")]

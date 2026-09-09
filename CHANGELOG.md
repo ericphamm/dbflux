@@ -6,6 +6,12 @@ All notable changes to DBFlux will be documented in this file.
 
 ### Changed
 
+* **Builds from this fork are named DBSpeed** — the window title, About page,
+  app bundle, installer, release title and every message that names the
+  application now say DBSpeed; the DBFlux name and wordmark belong to the
+  upstream project. The data directory, database file and keychain entries
+  keep their `dbflux` names so existing installations keep their connections.
+
 * **Language list derived from the translation catalogs (#360)** — the
   Settings language dropdown now lists every language that ships a catalog in
   `crates/dbflux_i18n/locales/`, with each language named in its own tongue

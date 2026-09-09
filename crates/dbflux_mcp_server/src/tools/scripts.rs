@@ -71,7 +71,7 @@ pub struct ExecuteScriptParams {
     #[schemars(description = "Path to the script file (relative to scripts root)")]
     pub path: String,
 
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 }
 

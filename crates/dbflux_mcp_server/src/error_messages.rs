@@ -29,11 +29,11 @@ pub fn connection_error(
          • Network timeout\n\
          \n\
          Troubleshooting:\n\
-         • Verify credentials in DBFlux GUI → Edit Connection\n\
+         • Verify credentials in DBSpeed GUI → Edit Connection\n\
          • Check database server is running\n\
          • For cloud databases: verify network access rules/security groups\n\
          • For SSH tunnels: ensure tunnel is configured and active\n\
-         • Test with DBFlux GUI first to isolate MCP-specific issues",
+         • Test with DBSpeed GUI first to isolate MCP-specific issues",
         error, connection_id, driver
     )
 }
@@ -62,9 +62,9 @@ pub fn connection_not_found(connection_id: &str) -> String {
          \n\
          Resolution:\n\
          • Run 'list_connections' to see available connections\n\
-         • Verify connection was not deleted in DBFlux GUI\n\
-         • Check if connection was created in a different DBFlux profile\n\
-         • Connection profiles are stored in the DBFlux database — open the Connection Manager in the DBFlux GUI to manage them",
+         • Verify connection was not deleted in DBSpeed GUI\n\
+         • Check if connection was created in a different DBSpeed profile\n\
+         • Connection profiles are stored in the DBSpeed database — open the Connection Manager in the DBSpeed GUI to manage them",
         connection_id
     )
 }
@@ -87,7 +87,7 @@ pub fn driver_not_available(driver_id: &str, available_drivers: &[String]) -> St
          Resolution:\n\
          • Use a connection with a different driver (run 'list_connections')\n\
          • Rebuild server with driver: cargo build -p dbflux --features {}\n\
-         • Check the connection profile driver_id via the Connection Manager in the DBFlux GUI",
+         • Check the connection profile driver_id via the Connection Manager in the DBSpeed GUI",
         driver_id, drivers_list, driver_id
     )
 }
@@ -122,7 +122,7 @@ pub fn query_execution_error(
          Troubleshooting:\n\
          • Verify SQL syntax for database type ({})\n\
          • Check user permissions with SHOW GRANTS or equivalent\n\
-         • Test query in DBFlux GUI query editor\n\
+         • Test query in DBSpeed GUI query editor\n\
          • For timeout: reduce query complexity or add LIMIT clause",
         error, tool, connection_id, db_info, driver, driver
     )
@@ -184,7 +184,7 @@ pub fn authorization_denied(
          Tool: {}\n\
          \n\
          Resolution:\n\
-         • Open DBFlux GUI → Connection Manager\n\
+         • Open DBSpeed GUI → Connection Manager\n\
          • Select connection → 'MCP' tab\n\
          • Under 'Policy Assignments', verify client '{}' has appropriate permissions\n\
          • Ensure roles/policies allow tool '{}'\n\
@@ -205,7 +205,7 @@ pub fn connection_not_mcp_enabled(connection_id: &str) -> String {
          This connection has MCP governance disabled.\n\
          \n\
          To enable:\n\
-         1. Open DBFlux GUI\n\
+         1. Open DBSpeed GUI\n\
          2. Go to Connection Manager → Select connection\n\
          3. Navigate to 'MCP' tab\n\
          4. Check 'Enable MCP for this connection'\n\

@@ -12,7 +12,7 @@ access:
   ssm_instance_id: 实例 ID
   ssm_region: 区域
   ssm_remote_port: 远程端口
-  ssm_port_hint: DBFlux 和操作系统会自动分配本地隧道端口，此处仅可配置远程端口。
+  ssm_port_hint: DBSpeed 和操作系统会自动分配本地隧道端口，此处仅可配置远程端口。
   auth_profile: 认证配置文件
   proxy_no_profiles: 未配置代理配置
   proxy_no_profiles_hint: 在 设置 > 代理 中添加代理
@@ -361,7 +361,7 @@ connection_manager:
       cannot_read_file: "无法读取文件：%{error}"
       parse_error: "解析错误：%{error}"
       encrypted_needs_passphrase: 此捆绑包已加密。请输入口令后重试。
-      encryption_unavailable: 此捆绑包使用口令加密，但当前版本的 DBFlux 不支持加密功能。
+      encryption_unavailable: 此捆绑包使用口令加密，但当前版本的 DBSpeed 不支持加密功能。
       wrong_passphrase: 口令错误或捆绑包已损坏。
       decryption_error: "解密错误：%{error}"
       import_failed: "导入失败：%{error}"
@@ -2085,7 +2085,7 @@ form:
     ssm_remote_port_positive: SSM 远程端口必须大于 0
     ssm_remote_port_invalid: SSM 远程端口必须是有效数字
     auth_profile_not_found: "在 ~/.aws/config 中未找到 AWS 配置文件 %{id}  — 请在连接前在 ~/.aws/config 中恢复或重新创建该配置文件。"
-    auth_profile_dangling_keyring_only: "认证配置文件 %{name} 仅存在于 DBFlux 密钥环中，在 ~/.aws/config 或 ~/.aws/credentials 中已没有对应条目。请将凭据添加到 ~/.aws/credentials 以使用此配置文件连接。"
+    auth_profile_dangling_keyring_only: "认证配置文件 %{name} 仅存在于 DBSpeed 密钥环中，在 ~/.aws/config 或 ~/.aws/credentials 中已没有对应条目。请将凭据添加到 ~/.aws/credentials 以使用此配置文件连接。"
     auth_profile_dangling: "在 ~/.aws/config 中未找到认证配置文件 %{name} 。请重新创建该配置文件或更新连接绑定。"
     dynamic_auth_profile_required: 动态值来源需要认证配置文件。请在访问标签页中选择一个。
     auth_profile_no_provider: "所选认证配置文件 %{name} 没有为动态值来源注册的提供程序。"
@@ -2102,7 +2102,7 @@ form:
     test_cleanup_failed: "测试连接清理失败：%{error}"
     test_cleanup_warning: "%{primary_error}（清理警告：%{cleanup_error}）"
     detached_hook_cleanup_failed: "未能释放配置 %{profile_name}（%{profile_id}）的分离式测试 Hook 任务；作用域任务 ID [%{task_ids}]：%{error}"
-    aws_credentials_missing: "无法解析配置文件 %{name} 的 AWS 凭据。请将凭据添加到 ~/.aws/credentials（或使用环境变量 / IAM 角色）后重试。DBFlux 不存储 AWS 访问密钥 — 凭据由 AWS SDK 直接读取。"
+    aws_credentials_missing: "无法解析配置文件 %{name} 的 AWS 凭据。请将凭据添加到 ~/.aws/credentials（或使用环境变量 / IAM 角色）后重试。DBSpeed 不存储 AWS 访问密钥 — 凭据由 AWS SDK 直接读取。"
     pipeline_stage_failed: "流水线阶段 %{stage}：%{source}"
 hooks:
   kind:
@@ -2159,7 +2159,7 @@ login:
     closing: 认证成功。正在关闭此对话框…
   body:
     sign_in_prompt: "使用 %{provider} 登录以继续连接 %{profile}。"
-    instructions: 在浏览器中打开登录 URL 并完成认证。登录完成后 DBFlux 将自动继续。
+    instructions: 在浏览器中打开登录 URL 并完成认证。登录完成后 DBSpeed 将自动继续。
     elapsed: "登录最多可能需要 5 分钟。已用时：%{seconds}s"
     browser_open_failed: "无法自动打开浏览器。请手动打开该 URL。（%{error}；回退失败：%{fallback_error}）"
   error:
@@ -2471,7 +2471,7 @@ settings:
       label: 语言
       option:
         system: 跟随系统
-      notice: 语言更改将在重启 DBFlux 后生效。
+      notice: 语言更改将在重启 DBSpeed 后生效。
     restore_session:
       label: 启动时恢复会话
     check_for_updates:
@@ -2703,7 +2703,7 @@ settings:
       execution_mode: 执行模式
       execution_mode_hint: 分离模式在后台运行，不会阻塞连接 / 断开
       ready_signal: 就绪信号
-      ready_signal_hint: DBFlux 会等待 Hook 输出中出现此文本后再继续。分离式预连接 Hook 必需。
+      ready_signal_hint: DBSpeed 会等待 Hook 输出中出现此文本后再继续。分离式预连接 Hook 必需。
       cwd: 工作目录
       env: 环境变量
       env_hint: 逗号分隔的 KEY=value 对
@@ -2776,7 +2776,7 @@ settings:
     login_completed: "配置文件 %{name} 的认证提供程序登录已完成。"
     login_failed: "配置文件 %{name} 的认证提供程序登录失败：%{error}"
     login_cancelled: 登录已被用户取消。
-    login_url_panel_description: 在浏览器中打开此 URL 以完成登录。完成认证后 DBFlux 将自动继续。
+    login_url_panel_description: 在浏览器中打开此 URL 以完成登录。完成认证后 DBSpeed 将自动继续。
     open_browser: 打开浏览器
     copy_url: 复制 URL
     login_action: 登录

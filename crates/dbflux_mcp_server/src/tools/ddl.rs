@@ -61,7 +61,7 @@ pub struct ForeignKeyRef {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct CreateTableParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table name to create")]
@@ -91,7 +91,7 @@ pub struct AlterOperation {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct AlterTableParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table name to alter")]
@@ -103,7 +103,7 @@ pub struct AlterTableParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct CreateIndexParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table name")]
@@ -122,7 +122,7 @@ pub struct CreateIndexParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct DropIndexParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     pub table: Option<String>,
@@ -142,7 +142,7 @@ pub struct TypeAttribute {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct CreateTypeParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Type name")]
@@ -165,7 +165,7 @@ pub struct CreateTypeParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct DropTableParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table name to drop")]
@@ -181,7 +181,7 @@ pub struct DropTableParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct DropDatabaseParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Database name to drop")]

@@ -12,7 +12,7 @@ access:
   ssm_instance_id: Instance ID
   ssm_region: Region
   ssm_remote_port: Remote Port
-  ssm_port_hint: DBFlux and the OS auto-assign the local tunnel port. Only Remote Port is configurable here.
+  ssm_port_hint: DBSpeed and the OS auto-assign the local tunnel port. Only Remote Port is configurable here.
   auth_profile: Auth Profile
   proxy_no_profiles: No proxy profiles configured
   proxy_no_profiles_hint: Add proxies in Settings > Proxies
@@ -362,7 +362,7 @@ connection_manager:
       cannot_read_file: "Cannot read file: %{error}"
       parse_error: "Parse error: %{error}"
       encrypted_needs_passphrase: This bundle is encrypted. Enter the passphrase and try again.
-      encryption_unavailable: This bundle is passphrase-encrypted but the encryption feature is not available in this build of DBFlux.
+      encryption_unavailable: This bundle is passphrase-encrypted but the encryption feature is not available in this build of DBSpeed.
       wrong_passphrase: Passphrase incorrect or bundle corrupted.
       decryption_error: "Decryption error: %{error}"
       import_failed: "Import failed: %{error}"
@@ -2185,7 +2185,7 @@ form:
     ssm_remote_port_positive: SSM Remote Port must be greater than 0
     ssm_remote_port_invalid: SSM Remote Port must be a valid number
     auth_profile_not_found: "AWS profile '%{id}' not found in ~/.aws/config — please restore or recreate the profile in ~/.aws/config before connecting."
-    auth_profile_dangling_keyring_only: "Auth profile '%{name}' is only in the DBFlux keyring and no longer has a corresponding entry in ~/.aws/config or ~/.aws/credentials. Add the credentials to ~/.aws/credentials to connect with this profile."
+    auth_profile_dangling_keyring_only: "Auth profile '%{name}' is only in the DBSpeed keyring and no longer has a corresponding entry in ~/.aws/config or ~/.aws/credentials. Add the credentials to ~/.aws/credentials to connect with this profile."
     auth_profile_dangling: "Auth profile '%{name}' could not be found in ~/.aws/config. Please recreate the profile or update the connection binding."
     dynamic_auth_profile_required: Dynamic value sources require an Auth Profile. Select one in Access tab.
     auth_profile_no_provider: "Selected Auth Profile '%{name}' has no registered provider for dynamic value sources."
@@ -2202,7 +2202,7 @@ form:
     test_cleanup_failed: "Test connection cleanup failed: %{error}"
     test_cleanup_warning: "%{primary_error} (cleanup warning: %{cleanup_error})"
     detached_hook_cleanup_failed: "Failed to release detached test hook tasks for profile '%{profile_name}' (%{profile_id}); scoped task IDs [%{task_ids}]: %{error}"
-    aws_credentials_missing: "AWS credentials for profile '%{name}' could not be resolved. Add the credentials to ~/.aws/credentials (or use environment variables / IAM role) and retry. DBFlux does not store AWS access keys — credentials are read directly by the AWS SDK."
+    aws_credentials_missing: "AWS credentials for profile '%{name}' could not be resolved. Add the credentials to ~/.aws/credentials (or use environment variables / IAM role) and retry. DBSpeed does not store AWS access keys — credentials are read directly by the AWS SDK."
     pipeline_stage_failed: "Pipeline stage '%{stage}': %{source}"
 hooks:
   kind:
@@ -2259,7 +2259,7 @@ login:
     closing: Authentication succeeded. Closing this dialog...
   body:
     sign_in_prompt: 'Sign in with %{provider} to continue connecting "%{profile}".'
-    instructions: Open the login URL in your browser and finish authentication. DBFlux will continue automatically once the login completes.
+    instructions: Open the login URL in your browser and finish authentication. DBSpeed will continue automatically once the login completes.
     elapsed: "Login can take up to 5 minutes. Elapsed: %{seconds}s"
     browser_open_failed: "Could not open browser automatically. Open the URL manually. (%{error}; fallback failed: %{fallback_error})"
   error:
@@ -2574,7 +2574,7 @@ settings:
       label: Language
       option:
         system: System
-      notice: Language changes apply after restarting DBFlux.
+      notice: Language changes apply after restarting DBSpeed.
     restore_session:
       label: Restore session on startup
     check_for_updates:
@@ -2813,7 +2813,7 @@ settings:
       execution_mode: Execution Mode
       execution_mode_hint: Detached runs in background and does not block connect/disconnect
       ready_signal: Ready Signal
-      ready_signal_hint: DBFlux waits for this text in hook output before continuing. Required for detached pre-connect hooks.
+      ready_signal_hint: DBSpeed waits for this text in hook output before continuing. Required for detached pre-connect hooks.
       cwd: Working Directory
       env: Environment
       env_hint: Comma-separated KEY=value pairs
@@ -2886,7 +2886,7 @@ settings:
     login_completed: "Auth-provider login completed for profile '%{name}'."
     login_failed: "Auth-provider login failed for profile '%{name}': %{error}"
     login_cancelled: Login cancelled by user.
-    login_url_panel_description: Open this URL in your browser to finish the login. DBFlux will continue automatically once you complete authentication.
+    login_url_panel_description: Open this URL in your browser to finish the login. DBSpeed will continue automatically once you complete authentication.
     open_browser: Open Browser
     copy_url: Copy URL
     login_action: Login

@@ -25,7 +25,7 @@ pub struct RequestExecutionParams {
     #[schemars(description = "Tool ID to execute (e.g., 'delete_records', 'drop_table')")]
     pub tool_id: String,
 
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Tool parameters as JSON object")]
