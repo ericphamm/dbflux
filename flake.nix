@@ -1,5 +1,5 @@
 {
-  description = "DBFlux - A fast, keyboard-first database client";
+  description = "DBSpeed - A fast, keyboard-first database client";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

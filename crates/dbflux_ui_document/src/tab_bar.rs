@@ -825,18 +825,18 @@ mod group_band_tests {
     #[test]
     fn window_title_leads_with_the_document_then_its_database() {
         assert_eq!(
-            super::window_title(Some(("flags", Some("monixa-test"))), "DBFlux"),
-            "flags - monixa-test - DBFlux"
+            super::window_title(Some(("flags", Some("monixa-test"))), "DBSpeed"),
+            "flags - monixa-test - DBSpeed"
         );
     }
 
     #[test]
     fn window_title_falls_back_to_the_product_alone() {
         assert_eq!(
-            super::window_title(Some(("query.sql", None)), "DBFlux"),
-            "query.sql - DBFlux"
+            super::window_title(Some(("query.sql", None)), "DBSpeed"),
+            "query.sql - DBSpeed"
         );
-        assert_eq!(super::window_title(None, "DBFlux"), "DBFlux");
+        assert_eq!(super::window_title(None, "DBSpeed"), "DBSpeed");
     }
 
     #[test]

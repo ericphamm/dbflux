@@ -11,7 +11,7 @@ use crate::{
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ConnectParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 }
 
@@ -29,7 +29,7 @@ pub struct GetConnectionInfoParams {
 
 #[tool_router(router = connection_router, vis = "pub")]
 impl DbFluxServer {
-    #[tool(description = "List all available database connections configured in DBFlux")]
+    #[tool(description = "List all available database connections configured in DBSpeed")]
     async fn list_connections(&self) -> Result<CallToolResult, ErrorData> {
         use dbflux_policy::ExecutionClassification;
 

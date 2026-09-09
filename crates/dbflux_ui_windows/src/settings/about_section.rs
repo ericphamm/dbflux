@@ -74,7 +74,13 @@ impl Render for AboutSection {
                                         .flex()
                                         .flex_col()
                                         .gap_1()
-                                        .child(Headline::new("DBFlux").xl())
+                                        .child(
+                                            Headline::new(
+                                                dbflux_core::ReleaseChannel::current()
+                                                    .display_name(),
+                                            )
+                                            .xl(),
+                                        )
                                         .child(MonoCaption::new(format!(
                                             "{} ({})",
                                             VERSION, PROFILE

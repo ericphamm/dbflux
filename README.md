@@ -1,5 +1,10 @@
 # DBFlux
 
+> This repository is a fork of [0xErwin1/dbflux](https://github.com/0xErwin1/dbflux).
+> Builds published from it are named **DBSpeed**: the DBFlux name belongs to the
+> upstream project, so a build that carries changes not yet merged there ships
+> under its own name. Improvements are submitted upstream as pull requests.
+
 **English** · [Español](README.es.md) · [简体中文](README.zh_Hans.md)
 
 An extensible, keyboard-first data platform delivered as a Rust + GPUI desktop client.

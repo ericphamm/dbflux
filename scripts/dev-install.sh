@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Build DBFlux and drop it into the local macOS app bundle.
+# Build DBSpeed and drop it into the local macOS app bundle.
 #
 # The development loop this exists for: change something, run this, launch the
 # app, see the change. Release builds are deliberately not the default — they
@@ -14,7 +14,7 @@
 #   scripts/dev-install.sh --no-build  # install whatever was built last
 #
 # Environment:
-#   DBFLUX_APP   Bundle to install into (default: /Applications/DBFlux Local.app)
+#   DBFLUX_APP   Bundle to install into (default: /Applications/DBSpeed Local.app)
 #
 # The bundle itself is not created here — it carries its own Info.plist and
 # icon, and only the executable and the version string are replaced. The
@@ -24,8 +24,8 @@
 set -euo pipefail
 
 FEATURES="sqlite,postgres,mysql,mssql,mongodb,redis,dynamodb,cloudwatch,influxdb,redshift,s3,aws"
-APP="${DBFLUX_APP:-/Applications/DBFlux Local.app}"
-BUNDLE_ID="dev.dbflux.local"
+APP="${DBFLUX_APP:-/Applications/DBSpeed Local.app}"
+BUNDLE_ID="io.github.ericphamm.dbspeed.local"
 SIGN_IDENTITY="${DBFLUX_SIGN_IDENTITY:-DBFlux Dev}"
 
 profile="debug"
@@ -96,5 +96,5 @@ codesign --verify --deep --strict "$APP"
 echo
 echo "installed $profile build $version into $APP"
 if pgrep -qf "$APP/Contents/MacOS/dbflux"; then
-  echo "DBFlux is running — quit and relaunch to pick up the new build."
+  echo "DBSpeed is running — quit and relaunch to pick up the new build."
 fi

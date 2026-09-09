@@ -81,14 +81,14 @@ pub(crate) fn try_close_held_database_connection(
 
     let Some(connection) = Arc::get_mut(&mut held_connection.connection.connection) else {
         return Err(format!(
-            "Cannot drop database '{}' while DBFlux still has active references to its connection",
+            "Cannot drop database '{}' while DBSpeed still has active references to its connection",
             held_connection.database
         ));
     };
 
     connection.close().map_err(|error| {
         format!(
-            "Failed to release DBFlux connection for database '{}': {}",
+            "Failed to release DBSpeed connection for database '{}': {}",
             held_connection.database, error
         )
     })

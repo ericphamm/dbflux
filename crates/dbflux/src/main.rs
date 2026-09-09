@@ -177,7 +177,7 @@ fn emit_system_startup(audit_service: &AuditService) {
         EventOutcome::Success,
     )
     .with_typed_action(SYSTEM_STARTUP)
-    .with_summary("DBFlux application started")
+    .with_summary("DBSpeed application started")
     .with_actor_id("system");
 
     if let Err(e) = audit_service.record(event) {
@@ -195,7 +195,7 @@ fn emit_system_shutdown(audit_service: &AuditService) {
         EventOutcome::Success,
     )
     .with_typed_action(SYSTEM_SHUTDOWN)
-    .with_summary("DBFlux application initiating shutdown")
+    .with_summary("DBSpeed application initiating shutdown")
     .with_actor_id("system");
 
     if let Err(e) = audit_service.record(event) {
@@ -350,7 +350,7 @@ fn run_gui() {
             Ok(state) => state,
             Err(e) => {
                 eprintln!(
-                    "DBFlux: failed to initialize storage — cannot open database: {e}\n\
+                    "DBSpeed: failed to initialize storage — cannot open database: {e}\n\
                      Check that ~/.local/share/dbflux is accessible and not corrupted."
                 );
                 cx.quit();

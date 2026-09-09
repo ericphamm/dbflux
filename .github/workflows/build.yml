@@ -63,15 +63,15 @@ jobs:
       - name: Resolve channel identity
         run: |
           if [ "${{ inputs.channel }}" = "nightly" ]; then
-            echo "APP_ID=dbflux-nightly"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux Nightly"          >> "$GITHUB_ENV"
-            echo "PKG_NAME=dbflux-nightly"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux.nightly" >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed-nightly"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed Nightly"          >> "$GITHUB_ENV"
+            echo "PKG_NAME=dbspeed-nightly"          >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed.nightly" >> "$GITHUB_ENV"
           else
-            echo "APP_ID=dbflux"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux"          >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed"          >> "$GITHUB_ENV"
             echo "PKG_NAME=dbflux"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux" >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed" >> "$GITHUB_ENV"
           fi
           BRAND_DIR="resources/branding/${{ inputs.channel }}"
           [ -d "$BRAND_DIR" ] || BRAND_DIR="resources/branding/stable"
@@ -127,7 +127,7 @@ jobs:
           grep -qF "version = \"${VERSION}\"" Cargo.toml \
             || { echo "::error::Version stamp did not apply."; exit 1; }
 
-      - name: Build DBFlux
+      - name: Build DBSpeed
         # No --locked here: the version stamp above mutates Cargo.toml, so cargo must
         # refresh the workspace entries in Cargo.lock. Dependency-lock integrity is
         # already enforced by the deterministic-tests and clippy gates (--locked) on
@@ -161,7 +161,7 @@ jobs:
       - name: Create tar archive
         run: |
           cd pkg
-          tar -czf ../dbflux-linux-${{ matrix.arch }}.tar.gz .
+          tar -czf ../dbspeed-linux-${{ matrix.arch }}.tar.gz .
 
       - name: Download appimagetool
         # Pinned to a tagged release (not the rolling `continuous`) and verified
@@ -224,7 +224,7 @@ jobs:
             exit 1
           fi
 
-          mv "$APPIMAGE_FILE" dbflux-linux-${{ matrix.arch }}.AppImage
+          mv "$APPIMAGE_FILE" dbspeed-linux-${{ matrix.arch }}.AppImage
 
       - name: Verify PNG icons
         # The per-size icons are committed under packaging/icons rather than
@@ -304,17 +304,17 @@ jobs:
       - name: Sign artifacts
         if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
-          gpg --armor --detach-sign dbflux-linux-${{ matrix.arch }}.tar.gz
-          gpg --armor --detach-sign dbflux-linux-${{ matrix.arch }}.AppImage
+          gpg --armor --detach-sign dbspeed-linux-${{ matrix.arch }}.tar.gz
+          gpg --armor --detach-sign dbspeed-linux-${{ matrix.arch }}.AppImage
           gpg --armor --detach-sign *.deb
           gpg --armor --detach-sign *.rpm
 
       - name: Generate checksums
         run: |
-          sha256sum dbflux-linux-${{ matrix.arch }}.tar.gz > dbflux-linux-${{ matrix.arch }}.tar.gz.sha256
-          sha256sum dbflux-linux-${{ matrix.arch }}.AppImage > dbflux-linux-${{ matrix.arch }}.AppImage.sha256
-          sha256sum *.deb > dbflux_${{ matrix.arch }}.deb.sha256
-          sha256sum *.rpm > dbflux_${{ matrix.arch }}.rpm.sha256
+          sha256sum dbspeed-linux-${{ matrix.arch }}.tar.gz > dbspeed-linux-${{ matrix.arch }}.tar.gz.sha256
+          sha256sum dbspeed-linux-${{ matrix.arch }}.AppImage > dbspeed-linux-${{ matrix.arch }}.AppImage.sha256
+          sha256sum *.deb > dbspeed_${{ matrix.arch }}.deb.sha256
+          sha256sum *.rpm > dbspeed_${{ matrix.arch }}.rpm.sha256
 
       - name: Upload artifacts
         if: env.ACT != 'true'
@@ -322,18 +322,18 @@ jobs:
         with:
           name: linux-${{ matrix.arch }}
           path: |
-            dbflux-linux-${{ matrix.arch }}.tar.gz
-            dbflux-linux-${{ matrix.arch }}.tar.gz.sha256
-            dbflux-linux-${{ matrix.arch }}.tar.gz.asc
-            dbflux-linux-${{ matrix.arch }}.AppImage
-            dbflux-linux-${{ matrix.arch }}.AppImage.sha256
-            dbflux-linux-${{ matrix.arch }}.AppImage.asc
+            dbspeed-linux-${{ matrix.arch }}.tar.gz
+            dbspeed-linux-${{ matrix.arch }}.tar.gz.sha256
+            dbspeed-linux-${{ matrix.arch }}.tar.gz.asc
+            dbspeed-linux-${{ matrix.arch }}.AppImage
+            dbspeed-linux-${{ matrix.arch }}.AppImage.sha256
+            dbspeed-linux-${{ matrix.arch }}.AppImage.asc
             *.deb
             *.deb.asc
-            dbflux_${{ matrix.arch }}.deb.sha256
+            dbspeed_${{ matrix.arch }}.deb.sha256
             *.rpm
             *.rpm.asc
-            dbflux_${{ matrix.arch }}.rpm.sha256
+            dbspeed_${{ matrix.arch }}.rpm.sha256
           retention-days: 90
 
       - name: (act) Store artifacts locally
@@ -341,19 +341,19 @@ jobs:
         run: |
           mkdir -p /tmp/artifacts/linux-${{ matrix.arch }}
           dest=/tmp/artifacts/linux-${{ matrix.arch }}
-          cp dbflux-linux-${{ matrix.arch }}.tar.gz "$dest"/
-          cp dbflux-linux-${{ matrix.arch }}.tar.gz.sha256 "$dest"/
-          cp dbflux-linux-${{ matrix.arch }}.AppImage "$dest"/
-          cp dbflux-linux-${{ matrix.arch }}.AppImage.sha256 "$dest"/
+          cp dbspeed-linux-${{ matrix.arch }}.tar.gz "$dest"/
+          cp dbspeed-linux-${{ matrix.arch }}.tar.gz.sha256 "$dest"/
+          cp dbspeed-linux-${{ matrix.arch }}.AppImage "$dest"/
+          cp dbspeed-linux-${{ matrix.arch }}.AppImage.sha256 "$dest"/
           cp *.deb "$dest"/
-          cp dbflux_${{ matrix.arch }}.deb.sha256 "$dest"/
+          cp dbspeed_${{ matrix.arch }}.deb.sha256 "$dest"/
           cp *.rpm "$dest"/
-          cp dbflux_${{ matrix.arch }}.rpm.sha256 "$dest"/
+          cp dbspeed_${{ matrix.arch }}.rpm.sha256 "$dest"/
 
           # Signatures exist only when a signing key was configured.
           if [ "$SIGNING_ENABLED" = "true" ]; then
-            cp dbflux-linux-${{ matrix.arch }}.tar.gz.asc "$dest"/
-            cp dbflux-linux-${{ matrix.arch }}.AppImage.asc "$dest"/
+            cp dbspeed-linux-${{ matrix.arch }}.tar.gz.asc "$dest"/
+            cp dbspeed-linux-${{ matrix.arch }}.AppImage.asc "$dest"/
             cp *.deb.asc "$dest"/
             cp *.rpm.asc "$dest"/
           fi
@@ -385,15 +385,15 @@ jobs:
       - name: Resolve channel identity
         run: |
           if [ "${{ inputs.channel }}" = "nightly" ]; then
-            echo "APP_ID=dbflux-nightly"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux Nightly"          >> "$GITHUB_ENV"
-            echo "PKG_NAME=dbflux-nightly"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux.nightly" >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed-nightly"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed Nightly"          >> "$GITHUB_ENV"
+            echo "PKG_NAME=dbspeed-nightly"          >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed.nightly" >> "$GITHUB_ENV"
           else
-            echo "APP_ID=dbflux"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux"          >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed"          >> "$GITHUB_ENV"
             echo "PKG_NAME=dbflux"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux" >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed" >> "$GITHUB_ENV"
           fi
           BRAND_DIR="resources/branding/${{ inputs.channel }}"
           [ -d "$BRAND_DIR" ] || BRAND_DIR="resources/branding/stable"
@@ -436,7 +436,7 @@ jobs:
           grep -qF "version = \"${VERSION}\"" Cargo.toml \
             || { echo "::error::Version stamp did not apply."; exit 1; }
 
-      - name: Build DBFlux
+      - name: Build DBSpeed
         # vendored-openssl makes ssh2/libssh2 compile OpenSSL from source for the
         # target instead of linking the runner's system OpenSSL. Required to
         # cross-compile x86_64 on the Apple Silicon runner (no x86_64 OpenSSL is
@@ -472,10 +472,10 @@ jobs:
           cp target/${{ matrix.target }}/release/dbflux "$APP_BUNDLE/Contents/MacOS/"
           chmod +x "$APP_BUNDLE/Contents/MacOS/dbflux"
 
-          # CFBundleIconFile in Info.plist names DBFlux, so the icns has to
-          # land as DBFlux.icns. Without it the bundle shows the generic
+          # CFBundleIconFile in Info.plist names DBSpeed, so the icns has to
+          # land as DBSpeed.icns. Without it the bundle shows the generic
           # application icon in the Dock and in Finder.
-          cp "$BRAND_DIR/icon.icns" "$APP_BUNDLE/Contents/Resources/DBFlux.icns"
+          cp "$BRAND_DIR/icon.icns" "$APP_BUNDLE/Contents/Resources/DBSpeed.icns"
 
           sed -e "s/\${VERSION}/$VERSION/g" -e "s/\${APP_NAME}/$APP_NAME/g" -e "s/\${BUNDLE_ID}/$BUNDLE_ID/g" resources/macos/Info.plist > "$APP_BUNDLE/Contents/Info.plist"
 
@@ -554,7 +554,7 @@ jobs:
             --app-drop-link 600 185 \
             --no-internet-enable \
             --skip-jenkins \
-            dbflux-macos-${{ matrix.arch }}.dmg \
+            dbspeed-macos-${{ matrix.arch }}.dmg \
             "$APP_BUNDLE"
 
       - name: Import GPG key
@@ -567,10 +567,10 @@ jobs:
       - name: Sign artifacts
         if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
-          gpg --armor --detach-sign dbflux-macos-${{ matrix.arch }}.dmg
+          gpg --armor --detach-sign dbspeed-macos-${{ matrix.arch }}.dmg
 
       - name: Generate checksum
-        run: shasum -a 256 dbflux-macos-${{ matrix.arch }}.dmg > dbflux-macos-${{ matrix.arch }}.dmg.sha256
+        run: shasum -a 256 dbspeed-macos-${{ matrix.arch }}.dmg > dbspeed-macos-${{ matrix.arch }}.dmg.sha256
 
       - name: Upload artifacts
         if: env.ACT != 'true'
@@ -578,19 +578,19 @@ jobs:
         with:
           name: macos-${{ matrix.arch }}
           path: |
-            dbflux-macos-${{ matrix.arch }}.dmg
-            dbflux-macos-${{ matrix.arch }}.dmg.sha256
-            dbflux-macos-${{ matrix.arch }}.dmg.asc
+            dbspeed-macos-${{ matrix.arch }}.dmg
+            dbspeed-macos-${{ matrix.arch }}.dmg.sha256
+            dbspeed-macos-${{ matrix.arch }}.dmg.asc
           retention-days: 90
 
       - name: (act) Store artifacts locally
         if: env.ACT == 'true'
         run: |
           mkdir -p /tmp/artifacts/macos-${{ matrix.arch }}
-          cp dbflux-macos-${{ matrix.arch }}.dmg /tmp/artifacts/macos-${{ matrix.arch }}/
-          cp dbflux-macos-${{ matrix.arch }}.dmg.sha256 /tmp/artifacts/macos-${{ matrix.arch }}/
+          cp dbspeed-macos-${{ matrix.arch }}.dmg /tmp/artifacts/macos-${{ matrix.arch }}/
+          cp dbspeed-macos-${{ matrix.arch }}.dmg.sha256 /tmp/artifacts/macos-${{ matrix.arch }}/
           if [ "$SIGNING_ENABLED" = "true" ]; then
-            cp dbflux-macos-${{ matrix.arch }}.dmg.asc /tmp/artifacts/macos-${{ matrix.arch }}/
+            cp dbspeed-macos-${{ matrix.arch }}.dmg.asc /tmp/artifacts/macos-${{ matrix.arch }}/
           fi
 
   build-windows:
@@ -606,11 +606,11 @@ jobs:
         shell: pwsh
         run: |
           if ("${{ inputs.channel }}" -eq "nightly") {
-            "APP_NAME=DBFlux Nightly"   | Out-File -FilePath $env:GITHUB_ENV -Append
-            "MY_APP_ID={{7F1C2A3B-4D5E-6F70-8192-A3B4C5D6E7F8}" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "APP_NAME=DBSpeed Nightly"   | Out-File -FilePath $env:GITHUB_ENV -Append
+            "MY_APP_ID={{A7C31E58-2B6D-4F9A-9E1C-6D0B8F4A2E17}" | Out-File -FilePath $env:GITHUB_ENV -Append
           } else {
-            "APP_NAME=DBFlux"   | Out-File -FilePath $env:GITHUB_ENV -Append
-            "MY_APP_ID={{D8A3E981-6A8D-4B8F-9E09-86D8DEB7A6F1}" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "APP_NAME=DBSpeed"   | Out-File -FilePath $env:GITHUB_ENV -Append
+            "MY_APP_ID={{4F0B2C6A-9D1E-4B7A-8C3F-2E5D7A9B1C43}" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
 
       - name: Install Rust toolchain
@@ -647,7 +647,7 @@ jobs:
             exit 1
           }
 
-      - name: Build DBFlux
+      - name: Build DBSpeed
         # No --locked: the version stamp above mutates Cargo.toml; see the Linux build
         # step for the full rationale.
         run: cargo build --release --features "$env:FEATURES" --target x86_64-pc-windows-msvc
@@ -669,7 +669,7 @@ jobs:
           New-Item -Path pkg -ItemType Directory -Force | Out-Null
           Copy-Item target/x86_64-pc-windows-msvc/release/dbflux.exe pkg/dbflux.exe
           Copy-Item dbflux.ico pkg/dbflux.ico
-          Compress-Archive -Path pkg/* -DestinationPath dbflux-windows-amd64.zip -Force
+          Compress-Archive -Path pkg/* -DestinationPath dbspeed-windows-amd64.zip -Force
 
       - name: Prepare installer files
         run: |
@@ -690,7 +690,7 @@ jobs:
           path: installer/installer.iss
 
       - name: Move installer
-        run: Move-Item installer/output/dbflux-windows-amd64-setup.exe dbflux-windows-amd64-setup.exe -Force
+        run: Move-Item installer/output/dbspeed-windows-amd64-setup.exe dbspeed-windows-amd64-setup.exe -Force
 
       - name: Import GPG key
         if: ${{ env.SIGNING_ENABLED == 'true' }}
@@ -702,16 +702,16 @@ jobs:
       - name: Sign artifacts
         if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
-          gpg --armor --detach-sign dbflux-windows-amd64.zip
-          gpg --armor --detach-sign dbflux-windows-amd64-setup.exe
+          gpg --armor --detach-sign dbspeed-windows-amd64.zip
+          gpg --armor --detach-sign dbspeed-windows-amd64-setup.exe
 
       - name: Generate checksums
         run: |
-          $hashZip = (Get-FileHash -Algorithm SHA256 dbflux-windows-amd64.zip).Hash.ToLower()
-          "$hashZip  dbflux-windows-amd64.zip" | Out-File -FilePath dbflux-windows-amd64.zip.sha256 -Encoding ascii
+          $hashZip = (Get-FileHash -Algorithm SHA256 dbspeed-windows-amd64.zip).Hash.ToLower()
+          "$hashZip  dbspeed-windows-amd64.zip" | Out-File -FilePath dbspeed-windows-amd64.zip.sha256 -Encoding ascii
 
-          $hashExe = (Get-FileHash -Algorithm SHA256 dbflux-windows-amd64-setup.exe).Hash.ToLower()
-          "$hashExe  dbflux-windows-amd64-setup.exe" | Out-File -FilePath dbflux-windows-amd64-setup.exe.sha256 -Encoding ascii
+          $hashExe = (Get-FileHash -Algorithm SHA256 dbspeed-windows-amd64-setup.exe).Hash.ToLower()
+          "$hashExe  dbspeed-windows-amd64-setup.exe" | Out-File -FilePath dbspeed-windows-amd64-setup.exe.sha256 -Encoding ascii
 
       - name: Upload artifacts
         if: env.ACT != 'true'
@@ -719,12 +719,12 @@ jobs:
         with:
           name: windows-amd64
           path: |
-            dbflux-windows-amd64.zip
-            dbflux-windows-amd64.zip.sha256
-            dbflux-windows-amd64.zip.asc
-            dbflux-windows-amd64-setup.exe
-            dbflux-windows-amd64-setup.exe.sha256
-            dbflux-windows-amd64-setup.exe.asc
+            dbspeed-windows-amd64.zip
+            dbspeed-windows-amd64.zip.sha256
+            dbspeed-windows-amd64.zip.asc
+            dbspeed-windows-amd64-setup.exe
+            dbspeed-windows-amd64-setup.exe.sha256
+            dbspeed-windows-amd64-setup.exe.asc
           retention-days: 90
 
       - name: (act) Store artifacts locally
@@ -732,13 +732,13 @@ jobs:
         shell: pwsh
         run: |
           New-Item -Path C:\tmp\artifacts\windows-amd64 -ItemType Directory -Force | Out-Null
-          Copy-Item dbflux-windows-amd64.zip C:\tmp\artifacts\windows-amd64\
-          Copy-Item dbflux-windows-amd64.zip.sha256 C:\tmp\artifacts\windows-amd64\
-          Copy-Item dbflux-windows-amd64-setup.exe C:\tmp\artifacts\windows-amd64\
-          Copy-Item dbflux-windows-amd64-setup.exe.sha256 C:\tmp\artifacts\windows-amd64\
+          Copy-Item dbspeed-windows-amd64.zip C:\tmp\artifacts\windows-amd64\
+          Copy-Item dbspeed-windows-amd64.zip.sha256 C:\tmp\artifacts\windows-amd64\
+          Copy-Item dbspeed-windows-amd64-setup.exe C:\tmp\artifacts\windows-amd64\
+          Copy-Item dbspeed-windows-amd64-setup.exe.sha256 C:\tmp\artifacts\windows-amd64\
 
           # Signatures exist only when a signing key was configured.
           if ($env:SIGNING_ENABLED -eq 'true') {
-            Copy-Item dbflux-windows-amd64.zip.asc C:\tmp\artifacts\windows-amd64\
-            Copy-Item dbflux-windows-amd64-setup.exe.asc C:\tmp\artifacts\windows-amd64\
+            Copy-Item dbspeed-windows-amd64.zip.asc C:\tmp\artifacts\windows-amd64\
+            Copy-Item dbspeed-windows-amd64-setup.exe.asc C:\tmp\artifacts\windows-amd64\
           }

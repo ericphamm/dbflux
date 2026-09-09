@@ -12,7 +12,7 @@ access:
   ssm_instance_id: ID de instancia
   ssm_region: Región
   ssm_remote_port: Puerto remoto
-  ssm_port_hint: DBFlux y el sistema operativo asignan automáticamente el puerto del túnel local. Aquí solo se puede configurar el puerto remoto.
+  ssm_port_hint: DBSpeed y el sistema operativo asignan automáticamente el puerto del túnel local. Aquí solo se puede configurar el puerto remoto.
   auth_profile: Perfil de autenticación
   proxy_no_profiles: No hay perfiles de proxy configurados
   proxy_no_profiles_hint: Agregar proxies en Ajustes > Proxies
@@ -362,7 +362,7 @@ connection_manager:
       cannot_read_file: "No se pudo leer el archivo: %{error}"
       parse_error: "Error de análisis: %{error}"
       encrypted_needs_passphrase: Este paquete está cifrado. Introduce la frase e inténtalo de nuevo.
-      encryption_unavailable: Este paquete está cifrado con frase, pero la función de cifrado no está disponible en esta compilación de DBFlux.
+      encryption_unavailable: Este paquete está cifrado con frase, pero la función de cifrado no está disponible en esta compilación de DBSpeed.
       wrong_passphrase: Frase incorrecta o paquete dañado.
       decryption_error: "Error de descifrado: %{error}"
       import_failed: "Fallo en la importación: %{error}"
@@ -2185,7 +2185,7 @@ form:
     ssm_remote_port_positive: El puerto remoto SSM debe ser mayor que 0
     ssm_remote_port_invalid: El puerto remoto SSM debe ser un número válido
     auth_profile_not_found: "No se encontró el perfil de AWS '%{id}' en ~/.aws/config — restaura o recrea el perfil en ~/.aws/config antes de conectar."
-    auth_profile_dangling_keyring_only: "El perfil de autenticación '%{name}' solo existe en el llavero de DBFlux y ya no tiene una entrada correspondiente en ~/.aws/config o ~/.aws/credentials. Agrega las credenciales a ~/.aws/credentials para conectar con este perfil."
+    auth_profile_dangling_keyring_only: "El perfil de autenticación '%{name}' solo existe en el llavero de DBSpeed y ya no tiene una entrada correspondiente en ~/.aws/config o ~/.aws/credentials. Agrega las credenciales a ~/.aws/credentials para conectar con este perfil."
     auth_profile_dangling: "No se pudo encontrar el perfil de autenticación '%{name}' en ~/.aws/config. Recrea el perfil o actualiza el enlace de la conexión."
     dynamic_auth_profile_required: Las fuentes de valores dinámicos requieren un perfil de autenticación. Selecciona uno en la pestaña Acceso.
     auth_profile_no_provider: "El perfil de autenticación seleccionado '%{name}' no tiene un proveedor registrado para fuentes de valores dinámicos."
@@ -2202,7 +2202,7 @@ form:
     test_cleanup_failed: "Error al limpiar la conexión de prueba: %{error}"
     test_cleanup_warning: "%{primary_error} (advertencia de limpieza: %{cleanup_error})"
     detached_hook_cleanup_failed: "No se pudieron liberar las tareas de hook de prueba independientes para el perfil '%{profile_name}' (%{profile_id}); IDs de tarea con alcance [%{task_ids}]: %{error}"
-    aws_credentials_missing: "No se pudieron resolver las credenciales de AWS para el perfil '%{name}'. Agrega las credenciales a ~/.aws/credentials (o usa variables de entorno / rol de IAM) y vuelve a intentarlo. DBFlux no almacena claves de acceso de AWS: las credenciales se leen directamente desde el SDK de AWS."
+    aws_credentials_missing: "No se pudieron resolver las credenciales de AWS para el perfil '%{name}'. Agrega las credenciales a ~/.aws/credentials (o usa variables de entorno / rol de IAM) y vuelve a intentarlo. DBSpeed no almacena claves de acceso de AWS: las credenciales se leen directamente desde el SDK de AWS."
     pipeline_stage_failed: "Etapa de la canalización '%{stage}': %{source}"
 hooks:
   kind:
@@ -2259,7 +2259,7 @@ login:
     closing: Autenticación correcta. Cerrando este diálogo...
   body:
     sign_in_prompt: 'Inicia sesión con %{provider} para continuar conectando "%{profile}".'
-    instructions: Abre la URL de inicio de sesión en tu navegador y completa la autenticación. DBFlux continuará automáticamente cuando el inicio de sesión finalice.
+    instructions: Abre la URL de inicio de sesión en tu navegador y completa la autenticación. DBSpeed continuará automáticamente cuando el inicio de sesión finalice.
     elapsed: "El inicio de sesión puede tardar hasta 5 minutos. Transcurrido: %{seconds}s"
     browser_open_failed: "No se pudo abrir el navegador automáticamente. Abre la URL manualmente. (%{error}; fallo alternativo: %{fallback_error})"
   error:
@@ -2574,7 +2574,7 @@ settings:
       label: Idioma
       option:
         system: Sistema
-      notice: Los cambios de idioma se aplican al reiniciar DBFlux.
+      notice: Los cambios de idioma se aplican al reiniciar DBSpeed.
     restore_session:
       label: Restaurar la sesión al iniciar
     check_for_updates:
@@ -2813,7 +2813,7 @@ settings:
       execution_mode: Modo de ejecución
       execution_mode_hint: El modo desacoplado se ejecuta en segundo plano y no bloquea la conexión ni la desconexión
       ready_signal: Señal de listo
-      ready_signal_hint: DBFlux espera este texto en la salida del hook antes de continuar. Obligatorio para hooks de preconexión desacoplados.
+      ready_signal_hint: DBSpeed espera este texto en la salida del hook antes de continuar. Obligatorio para hooks de preconexión desacoplados.
       cwd: Directorio de trabajo
       env: Entorno
       env_hint: Pares CLAVE=valor separados por comas
@@ -2886,7 +2886,7 @@ settings:
     login_completed: "Inicio de sesión del proveedor de autenticación completado para el perfil '%{name}'."
     login_failed: "Error al iniciar sesión del proveedor de autenticación para el perfil '%{name}': %{error}"
     login_cancelled: Inicio de sesión cancelado por el usuario.
-    login_url_panel_description: Abre esta URL en tu navegador para terminar el inicio de sesión. DBFlux continuará automáticamente cuando completes la autenticación.
+    login_url_panel_description: Abre esta URL en tu navegador para terminar el inicio de sesión. DBSpeed continuará automáticamente cuando completes la autenticación.
     open_browser: Abrir navegador
     copy_url: Copiar URL
     login_action: Iniciar sesión

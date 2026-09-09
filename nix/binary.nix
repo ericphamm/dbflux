@@ -56,7 +56,7 @@ let
   # home-manager `buildEnv`) without colliding on `bin/dbflux`.
   isNightly = lib.hasInfix "nightly" releaseInfo.version;
   appId = if isNightly then "dbflux-nightly" else "dbflux";
-  appName = if isNightly then "DBFlux Nightly" else "DBFlux";
+  appName = if isNightly then "DBSpeed Nightly" else "DBSpeed";
   brandDir = if isNightly then "nightly" else "stable";
 in
 stdenv.mkDerivation {

@@ -55,7 +55,7 @@ version = "0.10.0-dev.0"
 authors = ["Ignacio Perez <ignacio@feuer.me>"]
 description = "A fast, keyboard-first database client"
 repository = "https://github.com/ericphamm/dbflux"
-homepage = "https://dbflux.dev"
+homepage = "https://github.com/ericphamm/dbflux"
 documentation = "https://docs.dbflux.dev/"
 license = "MIT OR Apache-2.0"
 
