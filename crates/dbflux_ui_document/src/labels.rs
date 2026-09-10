@@ -182,6 +182,15 @@ pub(crate) fn load_all_rows_label() -> String {
 ///
 /// Uses the singular catalog bucket only for exactly one pending change;
 /// every other count uses the plural bucket.
+/// Row count while more rows remain below the loaded ones: "300 of 12480 rows".
+pub(crate) fn loaded_rows_label(loaded: usize, total: u64) -> String {
+    dbflux_i18n::t!(
+        "document.data.grid.status.rows.loaded_of_total",
+        loaded = loaded,
+        total = total
+    )
+}
+
 pub(crate) fn pending_change_count_label(count: usize) -> String {
     if count == 1 {
         dbflux_i18n::t!(
