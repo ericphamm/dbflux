@@ -625,13 +625,13 @@ fn background_tasks_layer() -> KeymapLayer {
 fn command_palette_layer() -> KeymapLayer {
     let mut layer = KeymapLayer::new(ContextId::CommandPalette);
 
-    layer.bind(KeyChord::new("j", Modifiers::none()), Command::SelectNext);
+    // Only non-printing keys: the palette owns a text input, and the
+    // workspace resolves this layer before the input sees the keystroke, so
+    // a bare letter bound here can never be typed into the search.
     layer.bind(
         KeyChord::new("down", Modifiers::none()),
         Command::SelectNext,
     );
-
-    layer.bind(KeyChord::new("k", Modifiers::none()), Command::SelectPrev);
     layer.bind(KeyChord::new("up", Modifiers::none()), Command::SelectPrev);
 
     layer.bind(KeyChord::new("enter", Modifiers::none()), Command::Execute);
@@ -1075,17 +1075,30 @@ mod tests {
         );
     }
 
-    /// The palette and the dropdown carry a text input, so a bare letter is
-    /// typed, never a command. A bare `s` used to save the active query and
-    /// swallow the keystroke, which made it impossible to type "s" into the
-    /// palette search.
+    /// The palette carries a text input, so a bare letter is typed, never a
+    /// command. `s` used to save the active query, and `j` / `k` moved the
+    /// selection in the sidebar or grid behind the palette; all three
+    /// swallowed the keystroke, so those letters could not be searched for.
     #[test]
-    fn typed_letters_reach_the_palette_and_dropdown_inputs() {
+    fn typed_letters_reach_the_palette_input() {
         let keymap = default_keymap();
-        let bare_s = KeyChord::new("s", Modifiers::none());
 
-        assert_eq!(keymap.resolve(ContextId::CommandPalette, &bare_s), None);
+        for key in ["s", "j", "k"] {
+            let chord = KeyChord::new(key, Modifiers::none());
+            assert_eq!(
+                keymap.resolve(ContextId::CommandPalette, &chord),
+                None,
+                "a bare {key} must reach the palette input"
+            );
+        }
+
+        // The dropdown is a plain list with no input, so its j/k stay.
+        let bare_s = KeyChord::new("s", Modifiers::none());
         assert_eq!(keymap.resolve(ContextId::Dropdown, &bare_s), None);
+        assert_eq!(
+            keymap.resolve(ContextId::Dropdown, &KeyChord::new("j", Modifiers::none())),
+            Some(Command::SelectNext)
+        );
     }
 
     #[test]
