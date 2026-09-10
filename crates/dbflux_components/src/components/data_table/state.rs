@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::ops::Range;
 use std::sync::Arc;
 
 use crate::controls::{InputEvent, InputState};
@@ -9,7 +10,7 @@ use gpui::{
 
 use super::clipboard;
 use super::events::{DataTableEvent, Direction, Edge, SortState};
-use super::model::{EditBuffer, TableModel};
+use super::model::{EditBuffer, RowData, TableModel};
 use super::selection::{CellCoord, SelectionState};
 use super::theme::{DEFAULT_COLUMN_WIDTH, MIN_COLUMN_WIDTH, SCROLLBAR_WIDTH};
 use crate::controls::{Dropdown, DropdownDismissed, DropdownItem, DropdownSelectionChanged};
@@ -55,6 +56,9 @@ pub struct DataTableState {
     /// `Window` — see `start_editing` for why the editor's own event handler
     /// cannot do it.
     pending_refocus: bool,
+    /// Row count at which `MoreRowsRequested` was last emitted; the table asks
+    /// again only once the host has appended rows.
+    more_rows_requested_at: Option<usize>,
 
     /// Scroll handle for horizontal scrolling.
     horizontal_scroll_handle: ScrollHandle,
@@ -147,6 +151,7 @@ impl DataTableState {
             record_scroll_handle: UniformListScrollHandle::new(),
             record_mode: false,
             pending_refocus: false,
+            more_rows_requested_at: None,
             horizontal_scroll_handle: ScrollHandle::new(),
             horizontal_offset: px(0.0),
             editing_cell: None,
@@ -201,8 +206,45 @@ impl DataTableState {
     /// is still valid in the new model (row index might be out of bounds or point to
     /// different data).
     #[allow(dead_code)]
+    /// Rows that may still sit below the viewport when the table asks the
+    /// host for the next batch. Large enough that a fast scroll reaches the
+    /// request before it reaches the end.
+    pub const LOAD_MORE_THRESHOLD_ROWS: usize = 30;
+
+    /// Called with the row range the list is about to render.
+    ///
+    /// When the range comes within `LOAD_MORE_THRESHOLD_ROWS` of the last
+    /// loaded row, the table asks the host for more, once per row count, so a
+    /// host with nothing left to load is not asked again every frame.
+    pub fn note_visible_range(&mut self, visible_range: Range<usize>, cx: &mut Context<Self>) {
+        let base_rows = self.model.row_count();
+        if base_rows == 0 || visible_range.end + Self::LOAD_MORE_THRESHOLD_ROWS < base_rows {
+            return;
+        }
+        if self.more_rows_requested_at == Some(base_rows) {
+            return;
+        }
+        self.more_rows_requested_at = Some(base_rows);
+        cx.emit(DataTableEvent::MoreRowsRequested);
+    }
+
+    /// Append a batch of base rows below the loaded ones.
+    ///
+    /// Unlike `set_model`, this keeps the selection, scroll position, column
+    /// widths and pending edits: only the row count grows. Pending inserts
+    /// keep their position relative to the row they were added after.
+    pub fn append_rows(&mut self, rows: Vec<RowData>, cx: &mut Context<Self>) {
+        if rows.is_empty() {
+            return;
+        }
+        Arc::make_mut(&mut self.model).rows.extend(rows);
+        self.edit_buffer.set_base_row_count(self.model.row_count());
+        cx.notify();
+    }
+
     pub fn set_model(&mut self, model: Arc<TableModel>, cx: &mut Context<Self>) {
         self.model = model;
+        self.more_rows_requested_at = None;
         // Emit SelectionChanged so the audit viewer's subscription can validate
         // that the selected row is still valid in the new model. If the row count
         // decreased, the selection may now be out of bounds.
@@ -1725,6 +1767,70 @@ mod tests {
             Some(CellCoord::new(1, 0)),
             "back in the grid, down must move to the next row again"
         );
+    }
+
+    /// The table asks for more rows once per row count: near the end it
+    /// emits, then stays quiet until rows are appended, then asks again.
+    #[gpui::test]
+    fn asks_for_more_rows_once_per_row_count(cx: &mut gpui::TestAppContext) {
+        // The harness renders the real editor, which reads the theme global.
+        cx.update(gpui_component::init);
+        use super::super::model::{CellValue, RowData};
+        use super::super::selection::CellCoord;
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let requests = Rc::new(Cell::new(0usize));
+        let (state, window) = record_mode_state(cx);
+        window.update(|_, app| {
+            state.update(app, |s, cx| s.set_record_mode(false, cx));
+        });
+
+        let counter = requests.clone();
+        window.update(|_, app| {
+            app.subscribe(&state, move |_, event: &super::DataTableEvent, _| {
+                if matches!(event, super::DataTableEvent::MoreRowsRequested) {
+                    counter.set(counter.get() + 1);
+                }
+            })
+            .detach();
+        });
+
+        // Two rows loaded, both on screen: that is within the threshold.
+        window.update(|_, app| {
+            state.update(app, |s, cx| {
+                s.note_visible_range(0..2, cx);
+                s.note_visible_range(0..2, cx);
+                s.note_visible_range(1..2, cx);
+            });
+        });
+        assert_eq!(
+            requests.get(),
+            1,
+            "the same row count must be asked for once"
+        );
+
+        // Appending keeps the selection and re-arms the request.
+        window.update(|_, app| {
+            state.update(app, |s, cx| {
+                let batch = (0..3)
+                    .map(|_| RowData {
+                        cells: vec![CellValue::null(), CellValue::null()],
+                    })
+                    .collect();
+                s.append_rows(batch, cx);
+            });
+        });
+        window.update(|_, app| {
+            let s = state.read(app);
+            assert_eq!(s.row_count(), 5);
+            assert_eq!(s.selection().active, Some(CellCoord::new(0, 0)));
+            assert_eq!(s.edit_buffer().base_row_count(), 5);
+        });
+        window.update(|_, app| {
+            state.update(app, |s, cx| s.note_visible_range(2..5, cx));
+        });
+        assert_eq!(requests.get(), 2, "a grown table must be asked for again");
     }
 
     #[gpui::test]

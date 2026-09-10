@@ -203,7 +203,7 @@ The SELECT body has sections you fill in top to bottom:
 - **Joins** — additional tables with an alias and an `ON` condition.
 - **Group By / Aggregates** — see below.
 - **Sort** — `ORDER BY` entries.
-- **Limit & Offset** — paging bounds.
+- **Limit & Offset** — paging bounds for the generated SELECT.
 
 The SQL preview is parameterized: literal values are emitted as placeholders for
 the active dialect (SQLite, PostgreSQL, MySQL/MariaDB, or SQL Server).
@@ -304,7 +304,7 @@ When the results panel has focus:
 - `h`/`l` (or `Left`/`Right`) — move between columns.
 - `g`/`Shift+g` (or `Home`/`End`) — first / last row.
 - `Ctrl+d`/`Ctrl+u` (or `PageDown`/`PageUp`) — page through rows.
-- `[` / `]` — previous / next page of results (pagination).
+- `[` / `]` — fetch the next batch of rows before scrolling reaches it.
 - `f` focuses the toolbar; `/` focuses the search/filter.
 - `z` toggles collapsing the panel.
 - `m` (or `Shift+F10`) opens the row/cell context menu.

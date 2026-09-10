@@ -21,7 +21,7 @@ use dbflux_components::icons::AppIcon;
 use dbflux_components::primitives::{BannerBlock, BannerVariant, Icon, Text, surface_raised};
 use dbflux_components::semantic::ChartColors;
 use dbflux_components::tokens::{FontSizes, Heights, Radii, Spacing};
-use dbflux_core::{ColumnKind, Pagination, QueryResultShape, SortDirection, Value};
+use dbflux_core::{ColumnKind, QueryResultShape, SortDirection, Value};
 use dbflux_ui_base::toast::{Toast, copy_action, now_hms};
 use gpui::prelude::*;
 use gpui::*;
@@ -43,10 +43,8 @@ struct RenderState {
     filter_input: Entity<InputState>,
     filter_has_value: bool,
     limit_input: Entity<InputState>,
-    pagination_info: Option<Pagination>,
-    total_pages: Option<u64>,
-    can_prev: bool,
-    can_next: bool,
+    /// Row count of the whole source, when the count query has answered.
+    total_rows: Option<u64>,
     sort_info: Option<(String, SortDirection, bool)>,
     show_toolbar_focus: bool,
     toolbar_focus: ToolbarFocus,
@@ -146,10 +144,7 @@ impl Render for DataGridPanel {
                 st.row_count,
                 &st.exec_time,
                 st.is_paginated,
-                st.pagination_info,
-                st.total_pages,
-                st.can_prev,
-                st.can_next,
+                st.total_rows,
                 st.sort_info,
                 st.has_data,
                 st.uses_result_view,
@@ -159,6 +154,7 @@ impl Render for DataGridPanel {
             ))
             .when_some(self.context_menu.as_ref(), |d, menu| {
                 d.child(self.render_context_menu(menu, st.is_editable, &st.theme, cx))
+            })
             })
             .when(self.pending_delete_confirm.is_some(), |d| {
                 d.child(self.render_delete_confirm_modal(&st.theme, cx))
@@ -209,9 +205,14 @@ impl DataGridPanel {
                 requery.pagination,
                 requery.order_by,
                 requery.total_rows,
+                false,
                 window,
                 cx,
             );
+        }
+
+        if std::mem::take(&mut self.pending.load_more) {
+            self.load_more_rows(window, cx);
         }
 
         if std::mem::take(&mut self.pending.rebuild) {
@@ -301,10 +302,7 @@ impl DataGridPanel {
         let filter_has_value = !self.filter_bar.filter_input.read(cx).value().is_empty();
         let limit_input = self.filter_bar.limit_input.clone();
 
-        let pagination_info = self.source.pagination().cloned();
-        let total_pages = self.total_pages();
-        let can_prev = self.can_go_prev();
-        let can_next = self.can_go_next();
+        let total_rows = self.source.total_rows();
         let sort_info = self.current_sort_info();
 
         let focus_mode = self.focus.focus_mode;
@@ -381,10 +379,7 @@ impl DataGridPanel {
             filter_input,
             filter_has_value,
             limit_input,
-            pagination_info,
-            total_pages,
-            can_prev,
-            can_next,
+            total_rows,
             sort_info,
             show_toolbar_focus,
             toolbar_focus,
@@ -3400,10 +3395,7 @@ impl DataGridPanel {
         row_count: usize,
         exec_time: &str,
         is_paginated: bool,
-        pagination_info: Option<Pagination>,
-        total_pages: Option<u64>,
-        can_prev: bool,
-        can_next: bool,
+        total_rows: Option<u64>,
         sort_info: Option<(String, SortDirection, bool)>,
         has_data: bool,
         uses_result_view: bool,
@@ -3568,7 +3560,12 @@ impl DataGridPanel {
                                     .size(px(12.0)) // guardrail-allow: 12px icon size, no ICON_XS token
                                     .color(theme.muted_foreground),
                             )
-                            .child(Text::caption(crate::labels::row_count_label(row_count))),
+                            .child(Text::caption(match total_rows.filter(|_| is_paginated) {
+                                Some(total) if total > row_count as u64 => {
+                                    crate::labels::loaded_rows_label(row_count, total)
+                                }
+                                _ => crate::labels::row_count_label(row_count),
+                            })),
                     )
                     .when_some(sort_info, |d, (col_name, direction, is_server)| {
                         let arrow_icon = match direction {
@@ -3590,72 +3587,6 @@ impl DataGridPanel {
                         )
                     }),
             )
-            // Center: pagination (for Table and Collection sources).
-            // Layout: ‹  N / Total  › using Unicode single-chevrons.
-            .child(div().flex().items_center().gap(Spacing::XS).when_some(
-                pagination_info.clone().filter(|_| is_paginated),
-                |d, pagination| {
-                    let page = pagination.current_page();
-
-                    let page_label = if let Some(total) = total_pages {
-                        format!("{} / {}", page, total)
-                    } else {
-                        format!("{}", page)
-                    };
-
-                    d.child(
-                        div()
-                            .id("prev-page")
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .w(px(20.0))
-                            .h(px(20.0))
-                            .rounded(Radii::SM)
-                            .text_size(FontSizes::SM)
-                            .when(can_prev, |d| {
-                                d.cursor_pointer()
-                                    .text_color(theme.foreground)
-                                    .hover(|d| d.bg(theme.secondary))
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.go_to_prev_page(window, cx);
-                                    }))
-                            })
-                            .when(!can_prev, |d| {
-                                d.text_color(theme.muted_foreground).opacity(0.5)
-                            })
-                            .child("\u{2039}"),
-                    )
-                    .child(
-                        Text::caption(page_label)
-                            .font_size(FontSizes::XS)
-                            .color(theme.muted_foreground),
-                    )
-                    .child(
-                        div()
-                            .id("next-page")
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .w(px(20.0))
-                            .h(px(20.0))
-                            .rounded(Radii::SM)
-                            .text_size(FontSizes::SM)
-                            .when(can_next, |d| {
-                                d.cursor_pointer()
-                                    .text_color(theme.foreground)
-                                    .hover(|d| d.bg(theme.secondary))
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.go_to_next_page(window, cx);
-                                    }))
-                            })
-                            .when(!can_next, |d| {
-                                d.text_color(theme.muted_foreground).opacity(0.5)
-                            })
-                            .child("\u{203a}"),
-                    )
-                },
-            ))
             // Right: export and execution time
             .child(
                 div()
@@ -3845,6 +3776,26 @@ impl DataGridPanel {
                     cx.notify();
                 }))
                 .children(items),
+        )
+    }
+
+    ///
+            cx.stop_propagation();
+            cx.notify();
+        };
+
+        deferred(
+            div()
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full()
+                .on_mouse_down(
+                    MouseButton::Left,
+                )
+                .on_mouse_down(
+                    MouseButton::Right,
+                )
         )
         .with_priority(1)
     }

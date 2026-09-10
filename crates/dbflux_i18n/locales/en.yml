@@ -1118,6 +1118,7 @@ document:
         rows:
           one: "%{count} row"
           many: "%{count} rows"
+          loaded_of_total: "%{loaded} of %{total} rows"
         pending_changes:
           one: "%{count} pending change"
           many: "%{count} pending changes"
@@ -1156,6 +1157,7 @@ document:
         chart_save_no_profile_binding: "Cannot save chart: query has no profile binding"
       placeholder:
         chart_name: Chart name
+        limit_all: all
       filter:
         open_in_builder: Open in builder
       toast:

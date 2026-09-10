@@ -6,6 +6,14 @@ All notable changes to DBFlux will be documented in this file.
 
 ### Changed
 
+* **Rows load as you scroll** — browsing a table or collection no longer
+  shows one page of 100 rows with Prev / Next: the first batch appears at
+  once and the next one is fetched whenever the grid nears its last loaded
+  row, without disturbing the selection, scroll position or pending edits.
+  The status bar reads "300 of 12480 rows" while more remain. The LIMIT field
+  is now a cap: leave it empty for no cap, or enter a number to stop loading
+  once that many rows are on screen.
+
 * **Builds from this fork are named DBSpeed** — the window title, About page,
   app bundle, installer, release title and every message that names the
   application now say DBSpeed; the DBFlux name and wordmark belong to the

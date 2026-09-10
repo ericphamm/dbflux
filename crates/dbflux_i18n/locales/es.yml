@@ -1118,6 +1118,7 @@ document:
         rows:
           one: "%{count} fila"
           many: "%{count} filas"
+          loaded_of_total: "%{loaded} de %{total} filas"
         pending_changes:
           one: "%{count} cambio pendiente"
           many: "%{count} cambios pendientes"
@@ -1156,6 +1157,7 @@ document:
         chart_save_no_profile_binding: "No se puede guardar el gráfico: la consulta no tiene un perfil vinculado"
       placeholder:
         chart_name: Nombre del gráfico
+        limit_all: todas
       filter:
         open_in_builder: Abrir en el generador
       toast:

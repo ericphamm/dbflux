@@ -48,7 +48,15 @@ impl DataGridPanel {
                     }
                 } else {
                     self.run_table_query(
-                        profile_id, database, table, pagination, order_by, total_rows, window, cx,
+                        profile_id,
+                        database,
+                        table,
+                        pagination.reset_offset(),
+                        order_by,
+                        total_rows,
+                        false,
+                        window,
+                        cx,
                     );
                 }
             }
@@ -61,8 +69,9 @@ impl DataGridPanel {
                 self.run_collection_query(
                     *profile_id,
                     collection.clone(),
-                    pagination.clone(),
+                    pagination.reset_offset(),
                     *total_docs,
+                    false,
                     window,
                     cx,
                 );
@@ -71,6 +80,72 @@ impl DataGridPanel {
                 // QueryResult is static, nothing to refresh
             }
         }
+    }
+
+    /// The batch to request, or `None` when the row cap leaves nothing to load.
+    ///
+    /// Reads the LIMIT field: empty means no cap, a number caps the rows the
+    /// grid will hold. The batch size itself is fixed; only the last batch
+    /// before the cap is shortened. `append` says whether the rows already on
+    /// screen count towards the cap.
+    pub(super) fn batch_pagination(
+        &mut self,
+        pagination: Pagination,
+        append: bool,
+        cx: &mut Context<Self>,
+    ) -> Option<Pagination> {
+        let limit_value = self.filter_bar.limit_input.read(cx).value();
+        let limit_str = limit_value.trim();
+        let row_cap = match limit_str.parse::<u32>() {
+            Ok(0) => {
+                Toast::warning(dbflux_i18n::t!(
+                    "document.data.grid.error.limit_must_be_positive"
+                ))
+                .meta_right(now_hms())
+                .push(cx);
+                None
+            }
+            Ok(cap) => Some(cap),
+            Err(_) if !limit_str.is_empty() => {
+                Toast::warning(dbflux_i18n::t!("document.data.grid.error.invalid_limit"))
+                    .meta_right(now_hms())
+                    .push(cx);
+                None
+            }
+            Err(_) => None,
+        };
+        self.filter_bar.row_cap = row_cap;
+
+        let loaded = if append {
+            self.result.rows.len() as u64
+        } else {
+            0
+        };
+        let allowed = row_cap.map_or(u64::MAX, |cap| u64::from(cap).saturating_sub(loaded));
+        if allowed == 0 {
+            self.refresh.reached_end = true;
+            return None;
+        }
+
+        let batch = u64::from(Pagination::default().limit());
+        Some(Pagination::Offset {
+            limit: batch.min(allowed) as u32,
+            offset: pagination.offset(),
+        })
+    }
+
+    /// Record whether the batch that just arrived was the last one.
+    fn note_batch_end(&mut self, batch_rows: usize, requested: u32) {
+        let loaded = self.result.rows.len() as u64;
+        let cap_reached = self
+            .filter_bar
+            .row_cap
+            .is_some_and(|cap| loaded >= u64::from(cap));
+        let total_reached = self
+            .source
+            .total_rows()
+            .is_some_and(|total| loaded >= total);
+        self.refresh.reached_end = batch_rows < requested as usize || cap_reached || total_reached;
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -82,6 +157,7 @@ impl DataGridPanel {
         pagination: Pagination,
         order_by: Vec<OrderByColumn>,
         total_rows: Option<u64>,
+        append: bool,
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -92,26 +168,8 @@ impl DataGridPanel {
             Some(filter_value.to_string())
         };
 
-        let limit_value = self.filter_bar.limit_input.read(cx).value();
-        let limit_str = limit_value.trim();
-        let pagination = match limit_str.parse::<u32>() {
-            Ok(0) => {
-                Toast::warning(dbflux_i18n::t!(
-                    "document.data.grid.error.limit_must_be_positive"
-                ))
-                .meta_right(now_hms())
-                .push(cx);
-                pagination
-            }
-            Ok(limit) if limit != pagination.limit() => pagination.with_limit(limit).reset_offset(),
-            Ok(_) => pagination,
-            Err(_) if !limit_str.is_empty() => {
-                Toast::warning(dbflux_i18n::t!("document.data.grid.error.invalid_limit"))
-                    .meta_right(now_hms())
-                    .push(cx);
-                pagination
-            }
-            Err(_) => pagination,
+        let Some(pagination) = self.batch_pagination(pagination, append, cx) else {
+            return;
         };
 
         // --- Relational filter gate (FR-GATE-1 to FR-GATE-3) ---
@@ -272,6 +330,7 @@ impl DataGridPanel {
                                 order_by_for_spawn,
                                 total_rows,
                                 query_result,
+                                append,
                                 cx,
                             );
                         });
@@ -457,35 +516,19 @@ impl DataGridPanel {
         .detach();
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn run_collection_query(
         &mut self,
         profile_id: Uuid,
         collection: CollectionRef,
         pagination: Pagination,
         total_docs: Option<u64>,
+        append: bool,
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let limit_value = self.filter_bar.limit_input.read(cx).value();
-        let limit_str = limit_value.trim();
-        let pagination = match limit_str.parse::<u32>() {
-            Ok(0) => {
-                Toast::warning(dbflux_i18n::t!(
-                    "document.data.grid.error.limit_must_be_positive"
-                ))
-                .meta_right(now_hms())
-                .push(cx);
-                pagination
-            }
-            Ok(limit) if limit != pagination.limit() => pagination.with_limit(limit).reset_offset(),
-            Ok(_) => pagination,
-            Err(_) if !limit_str.is_empty() => {
-                Toast::warning(dbflux_i18n::t!("document.data.grid.error.invalid_limit"))
-                    .meta_right(now_hms())
-                    .push(cx);
-                pagination
-            }
-            Err(_) => pagination,
+        let Some(pagination) = self.batch_pagination(pagination, append, cx) else {
+            return;
         };
 
         let conn = {
@@ -606,6 +649,7 @@ impl DataGridPanel {
                                 pagination_for_spawn,
                                 total_docs,
                                 query_result,
+                                append,
                                 cx,
                             );
                         });
@@ -639,6 +683,7 @@ impl DataGridPanel {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn apply_collection_result(
         &mut self,
         profile_id: Uuid,
@@ -646,6 +691,7 @@ impl DataGridPanel {
         pagination: Pagination,
         total_docs: Option<u64>,
         result: QueryResult,
+        append: bool,
         cx: &mut Context<Self>,
     ) {
         // Preserve existing total_docs if not provided
@@ -654,6 +700,9 @@ impl DataGridPanel {
             _ => None,
         };
 
+        let requested = pagination.limit();
+        let batch_rows = result.row_count();
+
         self.source = DataSource::Collection {
             profile_id,
             collection,
@@ -661,12 +710,39 @@ impl DataGridPanel {
             total_docs: total_docs.or(existing_total),
         };
 
-        self.result = result;
-        self.grid_table.local_sort_state = None;
-        self.grid_table.original_row_order = None;
-        self.rebuild_table(None, cx);
+        if !self.append_batch(result, append, cx) {
+            self.grid_table.local_sort_state = None;
+            self.grid_table.original_row_order = None;
+            self.rebuild_table(None, cx);
+        }
+        self.note_batch_end(batch_rows, requested);
         self.refresh.state = GridState::Ready;
         cx.notify();
+    }
+
+    /// Add a batch below the loaded rows without rebuilding the table.
+    ///
+    /// Returns false when the batch has to go through `rebuild_table`
+    /// instead: a fresh load, a grid that does not exist yet, or a locally
+    /// sorted result whose order the appended rows would break. In that case
+    /// the result is stored as the whole result, not appended.
+    fn append_batch(&mut self, result: QueryResult, append: bool, cx: &mut Context<Self>) -> bool {
+        use dbflux_components::components::data_table::model::TableModel;
+
+        let can_append = append
+            && self.grid_table.local_sort_state.is_none()
+            && self.grid_table.table_state.is_some();
+        if !can_append {
+            self.result = result;
+            return false;
+        }
+
+        let rows = TableModel::from(&result).rows;
+        self.result.rows.extend(result.rows);
+        if let Some(table_state) = &self.grid_table.table_state {
+            table_state.update(cx, |state, cx| state.append_rows(rows, cx));
+        }
+        true
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -678,6 +754,7 @@ impl DataGridPanel {
         order_by: Vec<OrderByColumn>,
         total_rows: Option<u64>,
         result: QueryResult,
+        append: bool,
         cx: &mut Context<Self>,
     ) {
         // Determine sort state from order_by for visual indicator
@@ -699,6 +776,9 @@ impl DataGridPanel {
             _ => (None, None),
         };
 
+        let requested = pagination.limit();
+        let batch_rows = result.row_count();
+
         self.source = DataSource::Table {
             profile_id,
             database: existing_database,
@@ -708,10 +788,12 @@ impl DataGridPanel {
             total_rows: total_rows.or(existing_total),
         };
 
-        self.result = result;
-        self.grid_table.local_sort_state = None;
-        self.grid_table.original_row_order = None;
-        self.rebuild_table(initial_sort, cx);
+        if !self.append_batch(result, append, cx) {
+            self.grid_table.local_sort_state = None;
+            self.grid_table.original_row_order = None;
+            self.rebuild_table(initial_sort, cx);
+        }
+        self.note_batch_end(batch_rows, requested);
         self.refresh.state = GridState::Ready;
         cx.notify();
     }

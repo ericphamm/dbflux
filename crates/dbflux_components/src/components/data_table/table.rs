@@ -952,6 +952,12 @@ impl DataTable {
             "table-rows",
             row_count,
             move |visible_range: Range<usize>, _window: &mut Window, cx: &mut App| {
+                // The list is the only place that knows which rows are on
+                // screen, so the "load more" request originates here.
+                state_entity.update(cx, |state, cx| {
+                    state.note_visible_range(visible_range.clone(), cx);
+                });
+
                 let theme = cx.theme();
                 // Read state INSIDE closure - only when actually rendering
                 let state = state_entity.read(cx);

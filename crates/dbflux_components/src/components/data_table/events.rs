@@ -134,6 +134,13 @@ pub enum DataTableEvent {
     /// Table received focus (clicked or otherwise activated).
     Focused,
 
+    /// The viewport is within a few rows of the last loaded one.
+    ///
+    /// Emitted once per row count: the host appends the next batch, or
+    /// ignores the event when there is nothing more to load, and the table
+    /// asks again only after the count has changed.
+    MoreRowsRequested,
+
     /// Request to save changes for a row.
     SaveRowRequested(usize),
 

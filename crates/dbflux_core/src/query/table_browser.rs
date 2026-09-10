@@ -61,6 +61,10 @@ impl OrderByColumn {
 
 /// Pagination strategy for table browsing.
 ///
+/// `limit` is the size of one batch. The grid loads the first batch and asks
+/// for the next one each time the user scrolls near the end of what is
+/// loaded, so it is a fetch size, not a cap on the rows the user can see.
+///
 /// Currently only supports OFFSET-based pagination.
 /// Keyset pagination can be added later for better performance on large tables.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,6 +150,20 @@ impl Pagination {
             Self::Offset { limit, .. } => Self::Offset {
                 limit: *limit,
                 offset: 0,
+            },
+        }
+    }
+
+    /// The same batch size, continuing at `offset`.
+    ///
+    /// Used when rows are appended as the user scrolls: the next request
+    /// starts where the loaded rows end, whatever size the previous batch
+    /// had.
+    pub fn with_offset(&self, new_offset: u64) -> Self {
+        match self {
+            Self::Offset { limit, .. } => Self::Offset {
+                limit: *limit,
+                offset: new_offset,
             },
         }
     }
@@ -583,6 +601,16 @@ impl DescribeRequest {
 mod tests {
     use super::*;
     use crate::DefaultSqlDialect;
+
+    #[test]
+    fn with_offset_continues_after_the_loaded_rows_with_the_same_batch_size() {
+        let first = Pagination::default();
+        let next = first.with_offset(250);
+
+        assert_eq!(next.limit(), first.limit());
+        assert_eq!(next.offset(), 250);
+        assert_eq!(next.reset_offset(), first);
+    }
 
     #[test]
     fn test_pagination_next_prev() {

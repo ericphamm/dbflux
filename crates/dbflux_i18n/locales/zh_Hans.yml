@@ -1089,6 +1089,7 @@ document:
         rows:
           one: "%{count} 行"
           many: "%{count} 行"
+          loaded_of_total: "已加载 %{loaded} / %{total} 行"
         pending_changes:
           one: "%{count} 处待处理更改"
           many: "%{count} 处待处理更改"
@@ -1127,6 +1128,7 @@ document:
         chart_save_no_profile_binding: "无法保存图表：查询未绑定连接配置"
       placeholder:
         chart_name: 图表名称
+        limit_all: 全部
       filter:
         open_in_builder: 在构建器中打开
       toast:

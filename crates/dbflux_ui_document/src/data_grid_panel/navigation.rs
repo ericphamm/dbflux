@@ -1,5 +1,5 @@
 use super::{
-    DataGridPanel, DataSource, EditState, GridFocusMode, LocalSortState, PendingRequery,
+    DataGridPanel, DataSource, EditState, GridFocusMode, GridState, LocalSortState, PendingRequery,
     ToolbarFocus,
 };
 use dbflux_app::keymap::Command;
@@ -214,67 +214,34 @@ impl DataGridPanel {
 
     // === Pagination ===
 
-    pub fn go_to_next_page(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        match &self.source {
-            DataSource::Table {
-                profile_id,
-                database,
-                table,
-                pagination,
-                order_by,
-                total_rows,
-            } => {
-                self.run_table_query(
-                    *profile_id,
-                    database.clone(),
-                    table.clone(),
-                    pagination.next_page(),
-                    order_by.clone(),
-                    *total_rows,
-                    window,
-                    cx,
-                );
-            }
-            DataSource::Collection {
-                profile_id,
-                collection,
-                pagination,
-                total_docs,
-            } => {
-                self.run_collection_query(
-                    *profile_id,
-                    collection.clone(),
-                    pagination.next_page(),
-                    *total_docs,
-                    window,
-                    cx,
-                );
-            }
-            DataSource::QueryResult { .. } => {}
-        }
-    }
-
-    pub fn go_to_prev_page(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(prev) = self.source.pagination().and_then(|p| p.prev_page()) else {
+    /// Fetch the batch after the loaded rows, if there is one.
+    ///
+    /// Triggered by the table when the viewport nears its last row; the
+    /// request continues at the loaded row count so a shortened last batch
+    /// or a cap never leaves a gap.
+    pub fn load_more_rows(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.can_load_more() {
             return;
-        };
+        }
 
+        let loaded = self.result.rows.len() as u64;
         match &self.source {
             DataSource::Table {
                 profile_id,
                 database,
                 table,
+                pagination,
                 order_by,
                 total_rows,
-                ..
             } => {
                 self.run_table_query(
                     *profile_id,
                     database.clone(),
                     table.clone(),
-                    prev,
+                    pagination.with_offset(loaded),
                     order_by.clone(),
                     *total_rows,
+                    true,
                     window,
                     cx,
                 );
@@ -282,14 +249,15 @@ impl DataGridPanel {
             DataSource::Collection {
                 profile_id,
                 collection,
+                pagination,
                 total_docs,
-                ..
             } => {
                 self.run_collection_query(
                     *profile_id,
                     collection.clone(),
-                    prev,
+                    pagination.with_offset(loaded),
                     *total_docs,
+                    true,
                     window,
                     cx,
                 );
@@ -298,34 +266,17 @@ impl DataGridPanel {
         }
     }
 
-    pub(super) fn can_go_prev(&self) -> bool {
-        self.source
-            .pagination()
-            .map(|p| !p.is_first_page())
-            .unwrap_or(false)
-    }
-
-    pub(super) fn can_go_next(&self) -> bool {
-        let Some(pagination) = self.source.pagination() else {
-            return false;
-        };
-
-        if let Some(total) = self.source.total_rows() {
-            let next_offset = pagination.offset() + pagination.limit() as u64;
-            return next_offset < total;
-        }
-
-        self.result.row_count() >= pagination.limit() as usize
-    }
-
-    pub(super) fn total_pages(&self) -> Option<u64> {
-        let pagination = self.source.pagination()?;
-        let total = self.source.total_rows()?;
-        let limit = pagination.limit() as u64;
-        if limit == 0 {
-            return Some(1);
-        }
-        Some(total.div_ceil(limit))
+    /// Whether scrolling to the end of the loaded rows fetches another batch.
+    ///
+    /// Builder-driven results bake their own pagination into the SELECT, and
+    /// a locally sorted grid would interleave appended rows out of order, so
+    /// neither loads more.
+    pub(super) fn can_load_more(&self) -> bool {
+        self.source.is_paginated()
+            && self.refresh.state != GridState::Loading
+            && !self.refresh.reached_end
+            && self.builder.visual_select.is_none()
+            && self.grid_table.local_sort_state.is_none()
     }
 
     // === Navigation ===
@@ -627,12 +578,10 @@ impl DataGridPanel {
                 self.column_right(cx);
                 true
             }
+            // Rows load in batches as the grid scrolls; the explicit command
+            // fetches the next batch without waiting for the scroll.
             Command::ResultsNextPage | Command::PageDown => {
-                self.go_to_next_page(window, cx);
-                true
-            }
-            Command::ResultsPrevPage | Command::PageUp => {
-                self.go_to_prev_page(window, cx);
+                self.load_more_rows(window, cx);
                 true
             }
             Command::RefreshSchema => {
