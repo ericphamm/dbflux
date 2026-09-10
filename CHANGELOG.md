@@ -39,6 +39,10 @@ All notable changes to DBFlux will be documented in this file.
 * **Export button toggles its menu** — a second click on Export closes the
   menu instead of leaving it open; clicking anywhere else or scrolling closes
   it too.
+* **No more "no primary key" flash on open** — the banner waited for nothing:
+  it showed while the table's key was still being fetched and vanished a
+  moment later. It now appears only once the fetch has answered and the table
+  really has no key.
 
 
 ### Added

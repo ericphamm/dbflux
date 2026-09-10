@@ -643,6 +643,10 @@ pub struct DataGridPanel {
     panel_origin: Point<Pixels>,
     /// Panel size from the same canvas; the context menu is kept inside it.
     panel_size: Size<Pixels>,
+    /// A table-details fetch for the primary key is in flight. Until it
+    /// answers, the grid is read-only for want of a key it may well have, so
+    /// the "no primary key" banner waits rather than flashing on every open.
+    pk_details_pending: bool,
     view_config: super::data_view::DataViewConfig,
     context_menu: Option<TableContextMenu>,
     is_active_tab: bool,
@@ -772,6 +776,7 @@ impl DataGridPanel {
             }
         };
 
+        self.pk_details_pending = true;
         cx.notify();
 
         let entity = cx.entity().clone();
@@ -795,6 +800,7 @@ impl DataGridPanel {
                             cx,
                         );
                         entity.update(cx, |panel, cx| {
+                            panel.pk_details_pending = false;
                             cx.notify();
                         });
                         return;
@@ -830,6 +836,7 @@ impl DataGridPanel {
 
                 // Update panel with PK info and recompute editable binding.
                 entity.update(cx, |panel, cx| {
+                    panel.pk_details_pending = false;
                     cx.notify();
                     if !pk_names.is_empty() {
                         panel.pk_columns = pk_names;
@@ -1231,6 +1238,7 @@ impl DataGridPanel {
             focus_handle,
             panel_origin: Point::default(),
             panel_size: Size::default(),
+            pk_details_pending: false,
             view_config,
             context_menu: None,
             is_active_tab: true,
