@@ -26,6 +26,18 @@ All notable changes to DBFlux will be documented in this file.
   via the `language.native_name` key. Contributing a new language on Weblate
   is enough for it to appear in the next build, with no code changes.
 
+### Fixed
+
+* **Cell context menu stays inside the window** — a right-click near the
+  right or bottom edge no longer opens a menu that is cut off; the menu is
+  shifted to fit and its submenus open to the left when there is no room on
+  the right. Scrolling with the menu open closes it instead of leaving it
+  hanging over rows that have moved away. Filter, Order, Generate SQL and
+  Copy as SQL open their submenu on hover, not only on click — and the
+  submenus are visible again: the fix that truncated long labels had clipped
+  the whole menu panel, and with it every submenu hanging off its edge.
+
+
 ### Added
 
 * **Complete Spanish documentation and a language menu (#360)** — the
