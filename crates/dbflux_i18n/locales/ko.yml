@@ -1665,6 +1665,7 @@ document:
         rows:
           one: "행 %{count}개"
           many: "행 %{count}개"
+          loaded_of_total: "%{total}개 중 %{loaded}개 행"
         pending_changes:
           one: "대기 중인 변경 사항 %{count}개"
           many: "대기 중인 변경 사항 %{count}개"
@@ -1702,6 +1703,7 @@ document:
         chart_save_no_profile_binding: "차트를 저장할 수 없습니다: 쿼리에 프로필 바인딩이 없습니다"
       placeholder:
         chart_name: 차트 이름
+        limit_all: 전체
       filter:
         open_in_builder: 빌더에서 열기
         builder_notice: 행은 빌더 쿼리에서 가져옵니다

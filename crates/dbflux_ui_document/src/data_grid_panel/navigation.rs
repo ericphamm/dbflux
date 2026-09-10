@@ -301,35 +301,68 @@ impl DataGridPanel {
             || self.reload_blocked_by_pending_edits(cx)
     }
 
+    /// Fetch the batch after the loaded rows, if there is one.
+    ///
+    /// Triggered by the table when the viewport nears its last row; the
+    /// request continues at the loaded row count so a shortened last batch
+    /// or a cap never leaves a gap.
+    pub fn load_more_rows(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.can_load_more() {
+            return;
+        }
+
+        let loaded = self.result.rows.len() as u64;
+        if let DataSource::Table {
+            profile_id,
+            database,
+            table,
+            pagination,
+            order_by,
+            total_rows,
+        } = &self.source
+        {
+            self.run_table_query(
+                *profile_id,
+                database.clone(),
+                table.clone(),
+                pagination.with_offset(loaded),
+                order_by.clone(),
+                *total_rows,
+                true,
+                window,
+                cx,
+            );
+        }
+    }
+
+    /// Whether scrolling to the end of the loaded rows fetches another batch.
+    ///
+    /// Only table browsing loads in batches. Builder-driven results bake
+    /// their own pagination into the SELECT, and a locally sorted grid would
+    /// interleave appended rows out of order, so neither loads more.
+    pub(super) fn can_load_more(&self) -> bool {
+        self.source.is_table()
+            && self.refresh.state != super::GridState::Loading
+            && !self.refresh.reached_end
+            && self.builder.visual_select.is_none()
+            && self.grid_table.local_sort_state.is_none()
+    }
+
     pub fn go_to_next_page(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // Tables load in batches as the grid scrolls: the next "page" is the
+        // next batch, appended below the rows already loaded. Appending keeps
+        // pending edits, so it is not refused like a page change.
+        if self.source.is_table() {
+            self.load_more_rows(window, cx);
+            return;
+        }
+
         if self.page_change_blocked(cx) {
             return;
         }
 
         match &self.source {
-            DataSource::Table {
-                profile_id,
-                database,
-                table,
-                pagination,
-                order_by,
-                total_rows,
-            } => {
-                // Another page is a different row set: the cursor belongs to
-                // the page being left. Marked only where a request is issued,
-                // so an arm that asks for nothing cannot leave the mark behind.
-                self.grid_table.reload = TableReload::ResetRows;
-                self.run_table_query(
-                    *profile_id,
-                    database.clone(),
-                    table.clone(),
-                    pagination.next_page(),
-                    order_by.clone(),
-                    *total_rows,
-                    window,
-                    cx,
-                );
-            }
+            DataSource::Table { .. } => {}
             DataSource::Collection {
                 profile_id,
                 collection,
@@ -351,6 +384,12 @@ impl DataGridPanel {
     }
 
     pub fn go_to_prev_page(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // A table holds every batch loaded so far; there is no earlier page
+        // to go back to, the rows above are already on screen.
+        if self.source.is_table() {
+            return;
+        }
+
         let Some(prev) = self.source.pagination().and_then(|p| p.prev_page()) else {
             return;
         };
@@ -376,6 +415,7 @@ impl DataGridPanel {
                     prev,
                     order_by.clone(),
                     *total_rows,
+                    false,
                     window,
                     cx,
                 );

@@ -1665,6 +1665,7 @@ document:
         rows:
           one: "%{count} linha"
           many: "%{count} linhas"
+          loaded_of_total: "%{loaded} de %{total} linhas"
         pending_changes:
           one: "%{count} alteração pendente"
           many: "%{count} alterações pendentes"
@@ -1702,6 +1703,7 @@ document:
         chart_save_no_profile_binding: "Não é possível salvar o gráfico: a consulta não tem vínculo com um perfil"
       placeholder:
         chart_name: Nome do gráfico
+        limit_all: todas
       filter:
         open_in_builder: Abrir no construtor
         builder_notice: As linhas vêm da consulta do construtor

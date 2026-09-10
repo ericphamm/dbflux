@@ -281,6 +281,7 @@ impl DataGridPanel {
                 requery.pagination,
                 requery.order_by,
                 requery.total_rows,
+                false,
                 window,
                 cx,
             );
@@ -3511,9 +3512,10 @@ impl DataGridPanel {
                 )
         };
 
+        // Tables load in batches as the grid scrolls, so only collections page.
         let pager = pagination_info
             .clone()
-            .filter(|_| is_paginated)
+            .filter(|_| is_paginated && !self.source.is_table())
             .map(|pagination| {
                 let page = pagination.current_page();
 
@@ -3598,7 +3600,14 @@ impl DataGridPanel {
                 if self.collection.raw.is_some() {
                     self.document_count_footer()
                 } else {
-                    crate::labels::row_count_label(row_count)
+                    // A table loads in batches: while more remain, say how
+                    // many of how many are on screen.
+                    match self.source.total_rows().filter(|_| self.source.is_table()) {
+                        Some(total) if total > row_count as u64 => {
+                            crate::labels::loaded_rows_label(row_count, total)
+                        }
+                        _ => crate::labels::row_count_label(row_count),
+                    }
                 },
             ))
             .when(shows_read_only, |d| {

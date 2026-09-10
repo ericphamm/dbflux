@@ -358,7 +358,7 @@ A read-only delete does not change the clipboard.
 | `h` / `l` (or `Left` / `Right`) | Column left / right |
 | `g` / `Shift+g` (or `Home` / `End`) | First / last row |
 | `Ctrl+d` / `Ctrl+u` (or `PageDown` / `PageUp`) | Page down / up |
-| `]` / `[` | Next / previous results page |
+| `]` | Load the next batch of table rows (collections: `]` / `[` page) |
 | `Alt+l` / `Alt+h` | Next / previous result tab of a query, or next / previous view (Documents, Schema, Aggregate) of a document collection, wrapping at either end |
 | `Alt+w` | Close the result tab shown; the editor gets focus when it was the last |
 | `F5` | Refresh the focused document (table rows, bucket list, object listing, keys) |

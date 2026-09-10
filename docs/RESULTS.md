@@ -20,14 +20,26 @@ When the results panel has focus:
 - `h`/`l` (or `Left`/`Right`) — move between columns.
 - `g`/`Shift+g` (or `Home`/`End`) — first / last row.
 - `Ctrl+d`/`Ctrl+u` (or `PageDown`/`PageUp`) — page through rows.
-- `[` / `]` — previous / next page of results (pagination).
+- `]` — load the next batch of rows now, without scrolling to it. Tables load
+  100 rows at a time as the grid scrolls; collections page with `[` / `]`.
 - `f` focuses the toolbar; `/` focuses the search/filter.
 - `z` toggles collapsing the panel.
 - `m` (or `Shift+F10`) opens the row/cell context menu.
 
+## Loading rows
+
+A table opens with its first 100 rows, and the next 100 arrive whenever the
+grid is scrolled near the last loaded row, below the rows already there — the
+selection, scroll position and unsaved edits stay as they are. While more
+remain, the status bar reads, for example, `300 of 12480 rows`.
+
+The **LIMIT** field caps the rows a table loads. Left empty (it shows `all`),
+there is no cap; a number stops the loading once that many rows are on screen.
+Changing it, sorting or filtering starts over from the first batch.
+
 ## Record view
 
-Press `i`, or use the Record toggle in the result status bar, to show
+Press `Tab`, or use the Record toggle in the result status bar, to show
 the active row as a Name / Value list that fills the result area. The header
 names the row's position in the result. Fields are edited exactly like grid
 cells, so unsaved changes, Save Row and revert work the same in both layouts;

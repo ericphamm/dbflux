@@ -455,6 +455,9 @@ struct PendingActions {
     modal_open: Option<PendingModalOpen>,
     document_preview: Option<PendingDocumentPreview>,
     context_menu_focus: bool,
+    /// The table scrolled near its last loaded row; fetch the next batch.
+    /// Deferred to render because the query path needs a `Window`.
+    load_more: bool,
     mutation_modal: Option<crate::data_grid_panel::mutation_confirm::PendingMutationModal>,
     /// Cell the value panel should open on. Deferred to render because
     /// building the panel's code editor needs a `Window`.
@@ -557,6 +560,10 @@ struct FilterBarState {
     /// `source` is `DataSource::Table` and a completion provider was wired.
     filter_completion_cache: Option<Rc<RefCell<SchemaCache>>>,
     limit_input: Entity<InputState>,
+    /// Cap on the rows the grid loads, parsed from `limit_input` on each
+    /// (re)load. `None` — the field is empty — means rows keep arriving in
+    /// batches as the user scrolls.
+    row_cap: Option<u32>,
     /// Refresh-policy dropdown; rendered both in the embedded toolbar and the
     /// chart toolbar. Change events are handled via a subscription wired in
     /// `new_internal`.
@@ -578,6 +585,9 @@ struct RefreshState {
     _refresh_timer: Option<Task<()>>,
     _refresh_subscriptions: Vec<Subscription>,
     state: GridState,
+    /// The last batch was short, hit the row cap, or reached the known total:
+    /// scrolling to the end of the loaded rows fetches nothing more.
+    reached_end: bool,
 }
 
 /// Document/JSON view widgets: tree entity, tree state, its subscription,
@@ -1281,10 +1291,20 @@ impl DataGridPanel {
             None
         };
 
+        // For a table the field is a cap: empty means rows keep arriving in
+        // batches as the user scrolls, a number stops the loading once that
+        // many rows are on screen. Collections still page, and their field
+        // keeps the page size.
+        let browses_in_batches = source.is_table();
         let limit_input = cx.new(|cx| {
-            let mut state = InputState::new(window, cx).placeholder("100");
-            state.set_value("100", window, cx);
-            state
+            if browses_in_batches {
+                InputState::new(window, cx)
+                    .placeholder(dbflux_i18n::t!("document.data.grid.placeholder.limit_all"))
+            } else {
+                let mut state = InputState::new(window, cx).placeholder("100");
+                state.set_value("100", window, cx);
+                state
+            }
         });
 
         cx.subscribe_in(
@@ -1522,6 +1542,7 @@ impl DataGridPanel {
                 filter_input,
                 filter_completion_cache,
                 limit_input,
+                row_cap: None,
                 refresh_dropdown,
                 browse_query_label: None,
             },
@@ -1530,6 +1551,7 @@ impl DataGridPanel {
                 _refresh_timer: None,
                 _refresh_subscriptions: vec![refresh_policy_sub],
                 state: GridState::Ready,
+                reached_end: false,
             },
             document_view: DocumentViewState {
                 document_tree: None,
@@ -3179,6 +3201,10 @@ impl DataGridPanel {
                             value: value.clone(),
                             is_json: *is_json,
                         });
+                        cx.notify();
+                    }
+                    DataTableEvent::MoreRowsRequested => {
+                        this.pending.load_more = true;
                         cx.notify();
                     }
                     DataTableEvent::CommitInsertRequested(insert_idx) => {
@@ -9732,6 +9758,7 @@ mod tests {
                     )],
                     Some(2),
                     reload_result(&["id", "name", "email"], 2),
+                    false,
                     cx,
                 );
             });
@@ -9798,6 +9825,7 @@ mod tests {
                     Vec::new(),
                     Some(2),
                     reload_result(&["id", "name", "email"], 2),
+                    false,
                     cx,
                 );
             });
@@ -9990,6 +10018,7 @@ mod tests {
                     Vec::new(),
                     Some(2),
                     reload_result(&["id", "name", "email"], 2),
+                    false,
                     cx,
                 );
 
@@ -10020,6 +10049,7 @@ mod tests {
                     Pagination::default(),
                     Vec::new(),
                     None,
+                    false,
                     window,
                     cx,
                 );
@@ -10052,6 +10082,7 @@ mod tests {
                     Vec::new(),
                     Some(2),
                     reload_result(&["id", "name", "email"], 2),
+                    false,
                     cx,
                 );
             });
@@ -10106,6 +10137,7 @@ mod tests {
                     Vec::new(),
                     Some(2),
                     reload_result(&["id", "name", "email"], 2),
+                    false,
                     cx,
                 );
             });
@@ -10154,6 +10186,7 @@ mod tests {
                     Vec::new(),
                     Some(2),
                     reload_result(&["id", "name", "email"], 2),
+                    false,
                     cx,
                 );
             });
@@ -10643,8 +10676,11 @@ mod tests {
         );
     }
 
+    /// A table loads its next batch below the rows on screen, so unsaved
+    /// edits do not hold it back the way they hold back a reload: the batch
+    /// is requested, and the edits stay staged.
     #[gpui::test]
-    fn page_change_with_pending_edits_keeps_them_and_skips_the_query(cx: &mut TestAppContext) {
+    fn next_batch_with_pending_edits_keeps_them(cx: &mut TestAppContext) {
         init_test_runtime(cx);
 
         let app_state = isolated_test_app_state(cx);
@@ -10662,19 +10698,15 @@ mod tests {
         assert!(handled);
         window.update(|_, app| {
             let panel = panel.read(app);
-
             assert_eq!(staged_names(panel, app), vec![(1, "bob".to_string())]);
-            assert_eq!(
-                panel.source.pagination().map(|p| p.offset()),
-                Some(0),
-                "the page must not move"
-            );
-            assert!(panel.refresh.state != GridState::Loading);
-            assert!(!panel.runner.is_primary_active());
         });
+        // The test profile is not connected, which is what the request
+        // reports: it was issued rather than refused.
         assert_eq!(
             last_toast_title(window),
-            Some(crate::labels::grid_reload_blocked_by_pending_edits())
+            Some(dbflux_i18n::t!(
+                "document.data.grid.error.connection_not_found"
+            ))
         );
     }
 
@@ -11408,6 +11440,7 @@ mod tests {
                     Vec::new(),
                     Some(2),
                     reload_result(&["id", "name", "email"], 2),
+                    false,
                     cx,
                 );
             });
@@ -12747,6 +12780,76 @@ mod tests {
                     .collect();
 
                 assert_eq!(labels, vec!["a".to_string(), "b".to_string()]);
+            });
+        });
+    }
+
+    /// The LIMIT field caps what the grid loads; batches stay the default size
+    /// and only the last one before the cap is shortened.
+    #[gpui::test]
+    fn limit_field_caps_batches_instead_of_sizing_them(cx: &mut TestAppContext) {
+        init_test_runtime(cx);
+
+        let app_state = isolated_test_app_state(cx);
+        let panel_holder = Rc::new(RefCell::new(None));
+        let panel_handle = panel_holder.clone();
+
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let panel = cx.new(|cx| {
+                let source = DataSource::Table {
+                    profile_id: Uuid::nil(),
+                    database: Some("app".to_string()),
+                    table: TableRef::with_schema("public", "users"),
+                    pagination: Pagination::default(),
+                    order_by: Vec::new(),
+                    total_rows: None,
+                };
+                let mut panel =
+                    DataGridPanel::new_internal(source, app_state.clone(), vec![], window, cx);
+                panel.set_result(zero_row_result(), cx);
+                panel.filter_bar.limit_input.update(cx, |input, cx| {
+                    input.set_value("150", window, cx);
+                });
+                panel
+            });
+            panel_handle.replace(Some(panel.clone()));
+            Root::new(panel, window, cx)
+        });
+
+        let panel = panel_holder
+            .borrow()
+            .clone()
+            .expect("panel should be created");
+
+        let batch = Pagination::default().limit();
+        window.update(|_, app| {
+            panel.update(app, |panel, cx| {
+                // Empty grid: a full first batch.
+                let first = panel
+                    .batch_pagination(Pagination::default(), false, cx)
+                    .expect("a cap above the batch size loads a full batch");
+                assert_eq!(first.limit(), batch);
+                assert_eq!(first.offset(), 0);
+                assert_eq!(panel.filter_bar.row_cap, Some(150));
+
+                // 100 rows on screen: the cap leaves 50.
+                let row = || vec![dbflux_core::Value::Null, dbflux_core::Value::Null];
+                panel.result.rows = (0..batch).map(|_| row()).collect();
+                let second = panel
+                    .batch_pagination(Pagination::default().with_offset(100), true, cx)
+                    .expect("50 rows remain under the cap");
+                assert_eq!(second.limit(), 50);
+                assert_eq!(second.offset(), 100);
+
+                // The cap is reached: nothing more, and the grid knows it.
+                panel.result.rows = (0..150).map(|_| row()).collect();
+                assert!(
+                    panel
+                        .batch_pagination(Pagination::default().with_offset(150), true, cx)
+                        .is_none()
+                );
+                assert!(panel.refresh.reached_end);
+                assert!(!panel.can_load_more());
             });
         });
     }
