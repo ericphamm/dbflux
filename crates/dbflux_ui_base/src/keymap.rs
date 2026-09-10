@@ -636,7 +636,6 @@ fn command_palette_layer() -> KeymapLayer {
 
     layer.bind(KeyChord::new("enter", Modifiers::none()), Command::Execute);
     layer.bind(KeyChord::new("escape", Modifiers::none()), Command::Cancel);
-    layer.bind(KeyChord::new("s", Modifiers::none()), Command::SaveQuery);
 
     layer
 }
@@ -919,7 +918,6 @@ fn dropdown_layer() -> KeymapLayer {
 
     layer.bind(KeyChord::new("enter", Modifiers::none()), Command::Execute);
     layer.bind(KeyChord::new("escape", Modifiers::none()), Command::Cancel);
-    layer.bind(KeyChord::new("s", Modifiers::none()), Command::SaveQuery);
 
     layer
 }
@@ -1075,6 +1073,19 @@ mod tests {
             keymap.resolve(ContextId::TextInput, &primary_n),
             Some(Command::NewQueryTab)
         );
+    }
+
+    /// The palette and the dropdown carry a text input, so a bare letter is
+    /// typed, never a command. A bare `s` used to save the active query and
+    /// swallow the keystroke, which made it impossible to type "s" into the
+    /// palette search.
+    #[test]
+    fn typed_letters_reach_the_palette_and_dropdown_inputs() {
+        let keymap = default_keymap();
+        let bare_s = KeyChord::new("s", Modifiers::none());
+
+        assert_eq!(keymap.resolve(ContextId::CommandPalette, &bare_s), None);
+        assert_eq!(keymap.resolve(ContextId::Dropdown, &bare_s), None);
     }
 
     #[test]
