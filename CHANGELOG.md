@@ -36,6 +36,9 @@ All notable changes to DBFlux will be documented in this file.
   Copy as SQL open their submenu on hover, not only on click — and the
   submenus are visible again: the fix that truncated long labels had clipped
   the whole menu panel, and with it every submenu hanging off its edge.
+* **Export button toggles its menu** — a second click on Export closes the
+  menu instead of leaving it open; clicking anywhere else or scrolling closes
+  it too.
 
 
 ### Added
