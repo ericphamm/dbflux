@@ -118,7 +118,7 @@ impl Tab {
         }
     }
 
-    pub fn tab_group(&self, cx: &App) -> Option<gpui::SharedString> {
+    pub fn tab_group(&self, cx: &App) -> Option<crate::types::TabGroup> {
         match self {
             Tab::Pane(p) => p.tab_group(cx),
         }

@@ -2421,11 +2421,12 @@ impl Workspace {
     /// title bar and the window list say which table is open — the order
     /// DBeaver and DbGate use.
     fn sync_window_title(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let active = self
-            .tab_manager
-            .read(cx)
-            .active_tab()
-            .map(|tab| (tab.meta_snapshot(cx).title, tab.tab_group(cx)));
+        let active = self.tab_manager.read(cx).active_tab().map(|tab| {
+            (
+                tab.meta_snapshot(cx).title,
+                tab.tab_group(cx).map(|group| group.database),
+            )
+        });
 
         let title = crate::ui::document::tab_bar::window_title(
             active

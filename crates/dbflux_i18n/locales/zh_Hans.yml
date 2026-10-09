@@ -4792,6 +4792,17 @@ sidebar:
     scripts_placeholder: 筛选脚本…
     stream_placeholder: 筛选流名称…
   menu:
+    choose_color: "选择颜色"
+    color:
+      automatic: "自动"
+      blue: "蓝色"
+      teal: "青色"
+      green: "绿色"
+      yellow: "黄色"
+      orange: "橙色"
+      red: "红色"
+      purple: "紫色"
+      pink: "粉色"
     open: 打开
     browse_event_streams: 浏览事件流
     view_schema: 查看 Schema

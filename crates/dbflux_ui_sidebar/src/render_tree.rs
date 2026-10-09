@@ -3,7 +3,7 @@ use crate::connection_failure::{ConnectionFailure, parse_failure_row_id};
 use dbflux_components::controls::Button;
 use dbflux_components::icons::AppIcon;
 use dbflux_components::primitives::{Icon, Status, StatusIndicator, Text};
-use dbflux_components::tokens::{ChromeColors, ShellMetrics, TreeMetrics};
+use dbflux_components::tokens::{ChromeColors, ProfileColors, ShellMetrics, TreeMetrics};
 use gpui::FontWeight;
 use std::time::Duration;
 
@@ -78,6 +78,12 @@ fn is_counted_folder(node_kind: SchemaNodeKind) -> bool {
     )
 }
 
+/// Side of the colour square that stands in for a connection's icon.
+///
+/// Smaller than an icon so the colour reads as a marker beside the name
+/// rather than as a glyph of its own.
+const PROFILE_SQUARE_SIZE: gpui::Pixels = gpui::px(10.0);
+
 pub(super) struct TreeRenderParams {
     pub connections: Vec<Uuid>,
     /// Tooltip text for profiles whose latest connect attempt failed.
@@ -89,9 +95,18 @@ pub(super) struct TreeRenderParams {
     /// Code-generation capabilities of each connected profile's driver.
     pub code_gen_capabilities: HashMap<Uuid, CodeGenCapabilities>,
     pub active_id: Option<Uuid>,
+    /// Driver logo per connection.
+    ///
+    /// Not rendered at the moment: the connection row shows a colour square
+    /// instead, which is where the colour chosen for the connection appears.
+    /// Kept because the mapping from driver metadata to a brand icon is the
+    /// hard part, and a future layout may want the logo back.
+    #[allow(dead_code)]
     pub profile_icons: HashMap<Uuid, AppIcon>,
     /// Color of each profile's driver logo (`DriverIconTone`).
     pub profile_icon_colors: HashMap<Uuid, Hsla>,
+    /// Colour the user picked for a connection, if any.
+    pub profile_colors: HashMap<Uuid, dbflux_core::ProfileColor>,
     /// Round-trip latency of each connected profile, shown after its status
     /// diamond. A profile whose probe has not answered shows the diamond
     /// alone.
@@ -261,7 +276,7 @@ pub(super) fn render_tree_item(
         _ => None,
     };
 
-    let (node_icon, unicode_icon, _category_color) = resolve_node_icon(
+    let (node_icon, unicode_icon, category_color) = resolve_node_icon(
         node_kind,
         &parsed_id,
         &params.profile_icons,
@@ -523,14 +538,24 @@ pub(super) fn render_tree_item(
                                 && unicode_icon.is_empty()
                                 && node_kind == SchemaNodeKind::Profile,
                             |el| {
-                                let status = if is_connected {
-                                    Status::Connected
-                                } else if connect_failure.is_some() {
-                                    Status::Error
+                                // The connection's colour as a square: filled
+                                // when connected, an outline when not, so the
+                                // square still carries the connection state.
+                                let color = if connect_failure.is_some() {
+                                    theme.danger
                                 } else {
-                                    Status::Idle
+                                    category_color
                                 };
-                                el.child(StatusIndicator::new(status))
+                                el.child(
+                                    div()
+                                        .w(PROFILE_SQUARE_SIZE)
+                                        .h(PROFILE_SQUARE_SIZE)
+                                        .rounded(Radii::SM)
+                                        .when(is_connected, |square| square.bg(color))
+                                        .when(!is_connected, |square| {
+                                            square.border_1().border_color(color)
+                                        }),
+                                )
                             },
                         ),
                 )
@@ -1407,7 +1432,7 @@ pub(crate) fn icon_for_node_kind(
 fn resolve_node_icon(
     node_kind: SchemaNodeKind,
     parsed_id: &Option<SchemaNodeId>,
-    profile_icons: &HashMap<Uuid, AppIcon>,
+    _profile_icons: &HashMap<Uuid, AppIcon>,
     is_connected: bool,
     theme: &gpui_component::Theme,
     params: &TreeRenderParams,
@@ -1417,21 +1442,22 @@ fn resolve_node_icon(
         SchemaNodeKind::ConnectionFolder => (Some(AppIcon::Folder), "", theme.muted_foreground),
         SchemaNodeKind::DatabasesFolder => (Some(AppIcon::Database), "", params.color_orange),
         SchemaNodeKind::Profile => {
-            let icon = parsed_id
+            // Deliberately no icon: returning `None` sends the icon slot to
+            // its square branch, which carries the connection's colour.
+            // `_profile_icons` still maps each connection to its driver logo
+            // for whenever a layout wants it back.
+            let color = parsed_id
                 .as_ref()
                 .and_then(|n| n.profile_id())
-                .and_then(|id| profile_icons.get(&id).copied());
+                .and_then(|id| params.profile_colors.get(&id).copied())
+                .map(ProfileColors::resolve)
+                .unwrap_or(if is_connected {
+                    params.color_green
+                } else {
+                    theme.muted_foreground
+                });
 
-            let color = if is_connected {
-                params.color_green
-            } else {
-                theme.muted_foreground
-            };
-
-            // When no driver icon is set, signal that a status diamond should render
-            // (the icon slot handles this via the `use_status_dot` branch).
-            let unicode = "";
-            (icon, unicode, color)
+            (None, "", color)
         }
         SchemaNodeKind::Database => (Some(AppIcon::Database), "", params.color_orange),
         SchemaNodeKind::EmptyDatabasesFolder => (Some(AppIcon::EyeOff), "", theme.input),

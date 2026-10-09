@@ -349,7 +349,7 @@ pub fn save_profiles(
             driver_id: Some(profile.driver_id()),
             description: None,
             favorite: false,
-            color: None,
+            color: profile.color.map(|color| color.id().to_string()),
             icon: None,
             save_password: profile.save_password,
             kind: Some(db_kind_to_str(profile.kind())),
@@ -1746,6 +1746,10 @@ fn load_profiles(
                     .and_then(dbflux_core::ConnectionEnvironment::from_id),
                 navigator_view: dbflux_core::NavigatorView::from_storage_str(&dto.navigator_view),
                 show_all_databases: dto.show_all_databases,
+                color: dto
+                    .color
+                    .as_deref()
+                    .and_then(dbflux_core::ProfileColor::from_id),
             })
         })
         .collect()

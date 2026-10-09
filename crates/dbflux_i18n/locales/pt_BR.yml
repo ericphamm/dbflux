@@ -4794,6 +4794,17 @@ sidebar:
     scripts_placeholder: Filtrar scripts…
     stream_placeholder: Filtrar nomes de streams…
   menu:
+    choose_color: "Escolher cor"
+    color:
+      automatic: "Automática"
+      blue: "Azul"
+      teal: "Verde-azulado"
+      green: "Verde"
+      yellow: "Amarelo"
+      orange: "Laranja"
+      red: "Vermelho"
+      purple: "Roxo"
+      pink: "Rosa"
     open: Abrir
     browse_event_streams: Navegar pelos fluxos de eventos
     view_schema: Ver schema

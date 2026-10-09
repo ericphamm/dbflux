@@ -1415,6 +1415,61 @@ impl NavigatorView {
     }
 }
 
+/// A colour the user picked for a connection.
+///
+/// Stored as a name rather than a colour value so the palette stays a UI
+/// concern: the core records "this connection is teal", and the UI decides
+/// what teal looks like. That also keeps a user's choice readable on light
+/// and dark backgrounds, which a raw hex could not promise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProfileColor {
+    Blue,
+    Teal,
+    Green,
+    Yellow,
+    Orange,
+    Red,
+    Purple,
+    Pink,
+}
+
+impl ProfileColor {
+    /// Every colour, in the order a picker should offer them.
+    pub const ALL: [Self; 8] = [
+        Self::Blue,
+        Self::Teal,
+        Self::Green,
+        Self::Yellow,
+        Self::Orange,
+        Self::Red,
+        Self::Purple,
+        Self::Pink,
+    ];
+
+    /// Stable identifier used in storage. Changing one of these strings
+    /// silently drops the colour of every connection that used it.
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Blue => "blue",
+            Self::Teal => "teal",
+            Self::Green => "green",
+            Self::Yellow => "yellow",
+            Self::Orange => "orange",
+            Self::Red => "red",
+            Self::Purple => "purple",
+            Self::Pink => "pink",
+        }
+    }
+
+    /// Parse a stored identifier, or `None` for anything unrecognised — an
+    /// older or newer build's value is treated as "no colour chosen" rather
+    /// than failing the whole profile load.
+    pub fn from_id(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|color| color.id() == value)
+    }
+}
+
 /// Deployment environment a connection points at.
 ///
 /// Purely descriptive: it drives the environment tag shown next to the
@@ -1549,6 +1604,11 @@ pub struct ConnectionProfile {
     /// it lists only the database the connection is configured with.
     #[serde(default = "default_show_all_databases")]
     pub show_all_databases: bool,
+
+    /// Colour shown in the sidebar square and in the band above this
+    /// connection's tabs. `None` lets both fall back to a derived colour.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<ProfileColor>,
 }
 
 fn default_show_all_databases() -> bool {
@@ -1578,6 +1638,7 @@ impl ConnectionProfile {
             environment: None,
             navigator_view: NavigatorView::Advanced,
             show_all_databases: true,
+            color: None,
         }
     }
 
@@ -1605,6 +1666,7 @@ impl ConnectionProfile {
             environment: None,
             navigator_view: NavigatorView::Advanced,
             show_all_databases: true,
+            color: None,
             mcp_governance: None,
         }
     }
@@ -1636,6 +1698,7 @@ impl ConnectionProfile {
             environment: None,
             navigator_view: NavigatorView::Advanced,
             show_all_databases: true,
+            color: None,
         }
     }
 
@@ -1672,6 +1735,7 @@ impl ConnectionProfile {
             environment: None,
             navigator_view: NavigatorView::Advanced,
             show_all_databases: true,
+            color: None,
         }
     }
 
@@ -1862,6 +1926,33 @@ impl TestConnectionResult {
         }
 
         parts.join(" \u{00B7} ")
+    }
+}
+
+#[cfg(test)]
+mod profile_color_tests {
+    use super::ProfileColor;
+
+    #[test]
+    fn profile_color_ids_round_trip_and_are_unique() {
+        let mut seen = std::collections::HashSet::new();
+
+        for color in ProfileColor::ALL {
+            let id = color.id();
+            assert!(seen.insert(id), "duplicate colour id {id}");
+            assert_eq!(
+                ProfileColor::from_id(id),
+                Some(color),
+                "{id} must parse back to the colour it names"
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_profile_color_is_treated_as_unset() {
+        // A value written by another build must not fail the profile load.
+        assert_eq!(ProfileColor::from_id("chartreuse"), None);
+        assert_eq!(ProfileColor::from_id(""), None);
     }
 }
 

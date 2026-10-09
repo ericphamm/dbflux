@@ -96,16 +96,23 @@ impl Render for TabDragPreview {
 struct TabGroupKey {
     connection_id: Option<Uuid>,
     database: SharedString,
+    /// Colour chosen for the connection, which overrides the derived one.
+    chosen: Option<dbflux_core::ProfileColor>,
 }
 
 impl TabGroupKey {
-    /// The band's colour, derived from the names.
+    /// The band's colour: what the user chose for the connection, or failing
+    /// that one derived from the names.
     ///
-    /// Drawn from the theme's chart palette so it fits either theme, and from
-    /// a hash rather than a running counter so a database keeps its colour as
-    /// tabs open and close around it.
+    /// The derived colour is drawn from the theme's chart palette so it fits
+    /// either theme, and comes from a hash rather than a running counter so a
+    /// database keeps its colour as tabs open and close around it.
     fn color(&self, theme: &gpui_component::theme::Theme) -> Hsla {
         use std::hash::{Hash, Hasher};
+
+        if let Some(chosen) = self.chosen {
+            return dbflux_components::tokens::ProfileColors::resolve(chosen);
+        }
 
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         self.connection_id.hash(&mut hasher);
@@ -390,9 +397,10 @@ impl Render for TabBar {
         let mut tabs: Vec<AnyElement> = Vec::with_capacity(tab_data.len());
         let mut previous_group: Option<TabGroupKey> = None;
         for (idx, (meta, change_summary, tooltip, group)) in tab_data.into_iter().enumerate() {
-            let group = group.map(|database| TabGroupKey {
+            let group = group.map(|group| TabGroupKey {
                 connection_id: meta.connection_id,
-                database,
+                database: group.database,
+                chosen: group.color,
             });
             let starts_group = group.is_some() && group != previous_group;
             let band = TabGroupBand::new(group.as_ref(), starts_group, cx.theme());
@@ -1052,6 +1060,40 @@ mod group_band_tests {
         assert_eq!(
             clamp_tab_menu_left(px(50.0), px(220.0), px(150.0)),
             TAB_MENU_EDGE_GAP
+        );
+    }
+
+    #[gpui::test]
+    fn a_chosen_connection_colour_wins_over_the_derived_one(cx: &mut gpui::TestAppContext) {
+        use super::TabGroupKey;
+        use dbflux_components::tokens::ProfileColors;
+        use dbflux_core::ProfileColor;
+        use gpui_component::theme::Theme;
+
+        cx.update(dbflux_components::theme::init);
+        let theme = cx.update(|cx| Theme::global(cx).clone());
+        let connection_id = Some(uuid::Uuid::new_v4());
+
+        let derived = TabGroupKey {
+            connection_id,
+            database: "monixa".into(),
+            chosen: None,
+        };
+        let chosen = TabGroupKey {
+            connection_id,
+            database: "monixa".into(),
+            chosen: Some(ProfileColor::Pink),
+        };
+
+        assert_eq!(
+            chosen.color(&theme),
+            ProfileColors::resolve(ProfileColor::Pink),
+            "the band must show what the user picked for the connection"
+        );
+        assert_ne!(
+            derived.color(&theme),
+            chosen.color(&theme),
+            "and the derived colour must not happen to be the same one"
         );
     }
 

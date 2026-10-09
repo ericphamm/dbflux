@@ -4793,6 +4793,17 @@ sidebar:
     scripts_placeholder: 스크립트 필터…
     stream_placeholder: 스트림 이름 필터…
   menu:
+    choose_color: "색상 선택"
+    color:
+      automatic: "자동"
+      blue: "파란색"
+      teal: "청록색"
+      green: "초록색"
+      yellow: "노란색"
+      orange: "주황색"
+      red: "빨간색"
+      purple: "보라색"
+      pink: "분홍색"
     open: 열기
     browse_event_streams: 이벤트 스트림 탐색
     view_schema: 스키마 보기

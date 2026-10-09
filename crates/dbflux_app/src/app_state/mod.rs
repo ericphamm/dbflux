@@ -1195,6 +1195,8 @@ impl AppState {
         if let Some(connected) = self.connections_mut().get_mut(&profile.id) {
             connected.profile.navigator_view = profile.navigator_view;
             connected.profile.show_all_databases = profile.show_all_databases;
+            // Likewise the colour only paints the sidebar and the tab band.
+            connected.profile.color = profile.color;
         }
 
         self.facade.profiles.update(profile);

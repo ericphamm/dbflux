@@ -3,6 +3,11 @@
 use dbflux_app::ExternalDriverStage;
 use dbflux_core::{DatabaseCategory, PipelineState, RelationKind, SchemaObjectKind};
 
+/// Translated name of a connection colour, for the picker.
+pub(crate) fn profile_color_label(color: dbflux_core::ProfileColor) -> String {
+    dbflux_i18n::t!(&format!("sidebar.menu.color.{}", color.id()))
+}
+
 /// Translated label for a schema-tree container folder, e.g. `"Tables (12)"`.
 pub(crate) fn container_folder_label(category: DatabaseCategory, count: usize) -> String {
     match category {

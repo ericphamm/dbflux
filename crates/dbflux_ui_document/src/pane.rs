@@ -337,10 +337,11 @@ pub struct PaneHandle {
     /// `None`, or a closure returning `None`, shows no tooltip.
     pub tab_tooltip: Option<Box<dyn Fn(&App) -> Option<gpui::SharedString>>>,
 
-    /// Returns the database the tab belongs to. The tab bar groups
-    /// neighbouring tabs of the same connection and database under one band
-    /// carrying this label. `None` leaves the tab ungrouped.
-    pub tab_group: Option<Box<dyn Fn(&App) -> Option<gpui::SharedString>>>,
+    /// Returns what the tab is grouped under: its database and its
+    /// connection's colour. The tab bar puts neighbouring tabs of the same
+    /// connection and database under one band. `None` leaves the tab
+    /// ungrouped.
+    pub tab_group: Option<Box<dyn Fn(&App) -> Option<crate::types::TabGroup>>>,
 
     /// Drains a browse-this-bucket intent raised by row activation (Enter),
     /// same `pending_*` + `take()` convention as the other optional helpers.
@@ -743,8 +744,8 @@ impl PaneHandle {
         self.tab_tooltip.as_ref().and_then(|f| f(cx))
     }
 
-    /// The database label the tab is grouped under, if the document has one.
-    pub fn tab_group(&self, cx: &App) -> Option<gpui::SharedString> {
+    /// What the tab is grouped under, if the document has a database.
+    pub fn tab_group(&self, cx: &App) -> Option<crate::types::TabGroup> {
         self.tab_group.as_ref().and_then(|f| f(cx))
     }
 }
