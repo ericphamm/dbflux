@@ -69,7 +69,7 @@ const SUBMENU_MAX_WIDTH: Pixels = px(280.0);
 
 /// How far a submenu overlaps the menu it hangs off (menu width 180 less the
 /// 172 offset in `sections.rs`), so the room it needs is its width less this.
-const SUBMENU_OVERLAP: Pixels = px(8.0);
+const SUBMENU_OVERLAP: Pixels = px(8.0); // guardrail-allow: a geometric overlap (180 - 172), not a spacing token
 
 /// Where a context menu goes, in panel coordinates.
 #[derive(Debug, Clone, Copy, PartialEq)]
