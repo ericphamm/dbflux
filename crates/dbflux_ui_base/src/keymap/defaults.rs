@@ -96,6 +96,12 @@ fn global_layer() -> KeymapLayer {
         KeyChord::new("p", Modifiers::primary_shift()),
         Command::ToggleCommandPalette,
     );
+    // Search every connected database — Cmd+P / Ctrl+P, the "go to anything"
+    // chord of editors and DbGate. Global, so it works from the editor too.
+    layer.bind(
+        KeyChord::new("p", Modifiers::primary()),
+        Command::SearchDatabases,
+    );
 
     // Connection Manager — Cmd+Shift+N on macOS, Ctrl+Shift+N elsewhere.
     layer.bind(
@@ -430,8 +436,10 @@ fn editor_layer() -> KeymapLayer {
         KeyChord::new("h", Modifiers::alt()),
         Command::ToggleHistoryDropdown,
     );
+    // Cmd+P searches the databases everywhere, so saved queries sit on the
+    // same letter with Option / Alt added.
     layer.bind(
-        KeyChord::new("p", Modifiers::primary()),
+        KeyChord::new("p", Modifiers::primary_alt()),
         Command::OpenSavedQueries,
     );
     layer.bind(KeyChord::new("s", Modifiers::primary()), Command::SaveQuery);

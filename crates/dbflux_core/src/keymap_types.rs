@@ -7,6 +7,7 @@
 pub enum Command {
     // === Global ===
     ToggleCommandPalette,
+    SearchDatabases,
     NewQueryTab,
     CloseCurrentTab,
     NextTab,
@@ -334,6 +335,7 @@ impl Command {
     pub fn display_name(&self) -> &'static str {
         match self {
             Command::ToggleCommandPalette => "Toggle command palette",
+            Command::SearchDatabases => "Search databases",
             Command::NewQueryTab => "New query tab",
             Command::CloseCurrentTab => "Close tab",
             Command::NextTab => "Next tab",
@@ -532,6 +534,7 @@ impl Command {
     pub fn id(&self) -> &'static str {
         match self {
             Command::ToggleCommandPalette => "toggle_command_palette",
+            Command::SearchDatabases => "search_databases",
             Command::NewQueryTab => "new_query_tab",
             Command::CloseCurrentTab => "close_tab",
             Command::NextTab => "next_tab",
@@ -754,6 +757,7 @@ impl Command {
         #[cfg_attr(not(feature = "mcp"), allow(unused_mut))]
         let mut variants = vec![
             Command::ToggleCommandPalette,
+            Command::SearchDatabases,
             Command::NewQueryTab,
             Command::CloseCurrentTab,
             Command::NextTab,
@@ -940,6 +944,7 @@ impl Command {
     pub fn category(&self) -> &'static str {
         match self {
             Command::ToggleCommandPalette
+            | Command::SearchDatabases
             | Command::NewQueryTab
             | Command::CloseCurrentTab
             | Command::NextTab
@@ -1136,6 +1141,7 @@ impl Command {
         matches!(
             self,
             Command::ToggleCommandPalette
+                | Command::SearchDatabases
                 | Command::NewQueryTab
                 | Command::OpenScriptFile
                 | Command::AddExternalScriptsFolder

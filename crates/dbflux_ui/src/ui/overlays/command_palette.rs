@@ -347,6 +347,7 @@ impl PaletteItem {
 /// Icon of a palette command, by command id.
 fn command_icon(id: &str) -> AppIcon {
     match id {
+        "search_databases" => AppIcon::Search,
         "new_query_tab" => AppIcon::Plus,
         "run_query" | "run_query_in_new_tab" => AppIcon::Play,
         "save_query" | "save_file_as" => AppIcon::Save,
@@ -651,6 +652,26 @@ fn palette_shortcut_parts(shortcut: &str) -> Vec<SharedString> {
     parts
 }
 
+/// Added to the fuzzy score when the query occurs verbatim in the text.
+///
+/// Skim scores are in the hundreds, so this lifts every contiguous match above
+/// every scattered one: for `email`, `customer_email_change_request` must beat
+/// `affiliate_api_log`, which only matches because its letters appear in
+/// order. The scattered matches stay in the list — they are what lets a user
+/// type `opncm` for "Open Connection Manager" — but they sort last.
+const CONTIGUOUS_MATCH_BONUS: i64 = 100_000;
+
+/// Score `text` against `query`, or `None` when it does not match at all.
+fn match_score(matcher: &SkimMatcherV2, text: &str, query: &str) -> Option<i64> {
+    let score = matcher.fuzzy_match(text, query)?;
+    let contiguous = text.to_lowercase().contains(&query.to_lowercase());
+    Some(if contiguous {
+        score + CONTIGUOUS_MATCH_BONUS
+    } else {
+        score
+    })
+}
+
 /// The items a typed query keeps, with their fuzzy-match scores. A leading
 /// `>` or `@` narrows the search to commands or to tables and collections.
 fn filter_items(items: &[PaletteItem], matcher: &SkimMatcherV2, query: &str) -> Vec<FilteredItem> {
@@ -665,8 +686,7 @@ fn filter_items(items: &[PaletteItem], matcher: &SkimMatcherV2, query: &str) -> 
                 return Some(FilteredItem { index, score: 0 });
             }
 
-            matcher
-                .fuzzy_match(&item.search_text(), text)
+            match_score(matcher, &item.search_text(), text)
                 .map(|score| FilteredItem { index, score })
         })
         .collect()
@@ -820,6 +840,25 @@ impl CommandPalette {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.open_with_items_and_placeholder(
+            items,
+            dbflux_i18n::t!("palette.search.placeholder").into(),
+            window,
+            cx,
+        );
+    }
+
+    /// Like [`Self::open_with_items`], with a placeholder that tells the user
+    /// what this particular opening searches — the database search reuses the
+    /// palette, and the default "commands, connections, tables, scripts" hint
+    /// would be wrong there.
+    pub fn open_with_items_and_placeholder(
+        &mut self,
+        items: Vec<PaletteItem>,
+        placeholder: SharedString,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.items = items;
         self.filtered = self
             .items
@@ -835,10 +874,32 @@ impl CommandPalette {
         self.filtered = arrange_results(&self.items, std::mem::take(&mut self.filtered), "");
 
         self.input_state.update(cx, |state, cx| {
+            state.set_placeholder(placeholder, window, cx);
             state.set_value("", window, cx);
             state.focus(window, cx);
         });
 
+        cx.notify();
+    }
+
+    /// Replace the item list of an already-open palette, keeping the query
+    /// the user typed and, where it still exists, the row they had selected.
+    ///
+    /// Used while database schemas arrive in the background: the list grows
+    /// under the search box instead of forcing the user to reopen it.
+    pub fn refresh_items(&mut self, items: Vec<PaletteItem>, cx: &mut Context<Self>) {
+        if !self.visible {
+            return;
+        }
+
+        let selected = self.selected_index;
+        self.items = items;
+
+        let query = self.input_state.read(cx).value().to_string();
+        self.update_filter(&query, cx);
+
+        self.selected_index = selected.min(self.filtered.len().saturating_sub(1));
+        self.ensure_selected_visible();
         cx.notify();
     }
 
@@ -1340,6 +1401,8 @@ impl Render for CommandPalette {
             .items_start()
             .pt(PaletteMetrics::TOP_OFFSET)
             .bg(overlay_bg(theme))
+            // Wheel events over the scrim must not reach the document below.
+            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
@@ -1388,6 +1451,10 @@ impl Render for CommandPalette {
                             .pb(PaletteMetrics::LIST_PADDING_BOTTOM)
                             .on_scroll_wheel(cx.listener(
                                 |this, event: &ScrollWheelEvent, _window, cx| {
+                                    // The palette floats over the document;
+                                    // without this the grid underneath scrolls
+                                    // along with the list.
+                                    cx.stop_propagation();
                                     let delta = event.delta.pixel_delta(px(1.0));
                                     if delta.y < px(0.0) {
                                         this.scroll_down(cx);
@@ -1420,13 +1487,45 @@ impl Render for CommandPalette {
 #[cfg(test)]
 mod tests {
     use super::{
-        MIXED_QUERY_COMMAND_LIMIT, PaletteCommand, PaletteItem, PaletteScope, PaletteSection,
-        ResourceItem, arrange_results, filter_items, footer_key_label, match_ranges,
-        palette_navigate_label, palette_shortcut_parts,
+        CONTIGUOUS_MATCH_BONUS, MIXED_QUERY_COMMAND_LIMIT, PaletteCommand, PaletteItem,
+        PaletteScope, PaletteSection, ResourceItem, arrange_results, filter_items,
+        footer_key_label, match_ranges, match_score, palette_navigate_label,
+        palette_shortcut_parts,
     };
     use fuzzy_matcher::skim::SkimMatcherV2;
     use std::fs;
     use uuid::Uuid;
+
+    #[test]
+    fn contiguous_matches_outrank_scattered_ones() {
+        let matcher = SkimMatcherV2::default();
+
+        // Search text carries the connection name too, which is where the
+        // scattered match gets its `m` from — exactly the noise seen in use.
+        let contiguous = match_score(
+            &matcher,
+            "Table Monixa Local customer_email_change_request monixa",
+            "email",
+        )
+        .unwrap_or_default();
+        let scattered = match_score(
+            &matcher,
+            "Table Monixa Local affiliate_api_log monixa",
+            "email",
+        )
+        .unwrap_or_default();
+        assert!(
+            contiguous > scattered,
+            "{contiguous} should beat {scattered}"
+        );
+
+        // Case does not matter for the bonus, and a non-match stays a non-match.
+        assert!(
+            match_score(&matcher, "Table EMAIL", "email").unwrap_or_default()
+                >= CONTIGUOUS_MATCH_BONUS
+        );
+        assert_eq!(match_score(&matcher, "Table orders", "email"), None);
+    }
 
     fn command_palette_source() -> String {
         let source = fs::read_to_string(concat!(

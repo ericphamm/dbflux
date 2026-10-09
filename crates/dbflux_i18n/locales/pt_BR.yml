@@ -3571,6 +3571,7 @@ palette:
     connected: "conectada"
   search:
     placeholder: Buscar comandos, conexões, tabelas, scripts…
+    databases_placeholder: "Buscar tabelas em todos os bancos de dados conectados…"
   empty: Nenhum item correspondente
   section:
     connections: Conexões
@@ -3592,6 +3593,8 @@ palette:
   import_dashboard:
     name: Importar dashboard de JSON…
   command:
+    search_databases:
+      name: "Buscar nos bancos de dados"
     new_query_tab:
       name: Nova aba de consulta
     run_query:
@@ -3943,6 +3946,7 @@ settings:
     switch_to_tab_indexed: "Ir para a aba %{index}"
     command:
       toggle_command_palette: Alternar paleta de comandos
+      search_databases: "Buscar nos bancos de dados"
       new_query_tab: Nova aba de consulta
       close_tab: Fechar aba
       next_tab: Próxima aba

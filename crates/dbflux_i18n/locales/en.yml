@@ -3571,6 +3571,7 @@ palette:
     connected: "connected"
   search:
     placeholder: Search commands, connections, tables, scripts…
+    databases_placeholder: "Search tables across all connected databases…"
   empty: No matching items
   section:
     connections: Connections
@@ -3592,6 +3593,8 @@ palette:
   import_dashboard:
     name: Import dashboard from JSON…
   command:
+    search_databases:
+      name: "Search databases"
     new_query_tab:
       name: New query tab
     run_query:
@@ -3943,6 +3946,7 @@ settings:
     switch_to_tab_indexed: "Switch to tab %{index}"
     command:
       toggle_command_palette: Toggle command palette
+      search_databases: "Search databases"
       new_query_tab: New query tab
       close_tab: Close tab
       next_tab: Next tab

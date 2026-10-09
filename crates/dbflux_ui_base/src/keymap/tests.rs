@@ -158,7 +158,7 @@ fn test_editor_history_bindings() {
     let keymap = default_keymap();
 
     let alt_h = KeyChord::new("h", Modifiers::alt());
-    let primary_p = KeyChord::new("p", Modifiers::primary());
+    let primary_alt_p = KeyChord::new("p", Modifiers::primary_alt());
     let primary_s = KeyChord::new("s", Modifiers::primary());
 
     assert_eq!(
@@ -166,7 +166,7 @@ fn test_editor_history_bindings() {
         Some(Command::ToggleHistoryDropdown)
     );
     assert_eq!(
-        keymap.resolve(ContextId::Editor, &primary_p),
+        keymap.resolve(ContextId::Editor, &primary_alt_p),
         Some(Command::OpenSavedQueries)
     );
     assert_eq!(
@@ -2649,4 +2649,27 @@ fn run_command_for_returns_the_bound_action(cx: &mut gpui::TestAppContext) {
         rebound.from_user_binding,
         "the rebound chord comes from the user's binding"
     );
+}
+
+/// Primary+P searches the databases from every pane. The editor used to claim
+/// it for saved queries, which made the shortcut depend on where the focus
+/// happened to be.
+#[test]
+fn primary_p_searches_the_databases_everywhere() {
+    let keymap = default_keymap();
+    let primary_p = KeyChord::new("p", Modifiers::primary());
+
+    for context in [
+        ContextId::Global,
+        ContextId::Editor,
+        ContextId::Sidebar,
+        ContextId::Results,
+        ContextId::TextInput,
+    ] {
+        assert_eq!(
+            keymap.resolve(context, &primary_p),
+            Some(Command::SearchDatabases),
+            "{context:?}"
+        );
+    }
 }

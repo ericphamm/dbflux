@@ -3571,6 +3571,7 @@ palette:
     connected: "연결됨"
   search:
     placeholder: 명령, 연결, 테이블, 스크립트 검색…
+    databases_placeholder: "연결된 모든 데이터베이스에서 테이블 검색…"
   empty: 일치하는 항목이 없습니다
   section:
     connections: 연결
@@ -3592,6 +3593,8 @@ palette:
   import_dashboard:
     name: JSON에서 대시보드 가져오기…
   command:
+    search_databases:
+      name: "데이터베이스 검색"
     new_query_tab:
       name: 새 쿼리 탭
     run_query:
@@ -3943,6 +3946,7 @@ settings:
     switch_to_tab_indexed: "%{index}번 탭으로 전환"
     command:
       toggle_command_palette: 명령 팔레트 전환
+      search_databases: "데이터베이스 검색"
       new_query_tab: 새 쿼리 탭
       close_tab: 현재 탭 닫기
       next_tab: 다음 탭

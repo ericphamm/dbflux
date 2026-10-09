@@ -148,6 +148,89 @@ pub(super) fn build_resource_items_from_schema(
     }
 }
 
+/// Resource items from the per-database schema cache of a connection.
+///
+/// Servers that load one database at a time (MySQL, for example) keep the
+/// tables of each loaded database here rather than in the connection's
+/// schema snapshot, which only lists the database names — so a palette built
+/// from the snapshot alone shows nothing for such servers even though the
+/// sidebar has the tables on screen.
+///
+/// Databases are visited in name order so the resulting list is stable.
+pub(super) fn build_resource_items_from_database_schemas(
+    profile_id: uuid::Uuid,
+    profile_name: &str,
+    database_schemas: &std::collections::HashMap<String, dbflux_core::DbSchemaInfo>,
+    items: &mut Vec<PaletteItem>,
+) {
+    let mut databases: Vec<(&String, &dbflux_core::DbSchemaInfo)> =
+        database_schemas.iter().collect();
+    databases.sort_by_key(|(name, _)| *name);
+
+    for (database, db_schema) in databases {
+        for table in &db_schema.tables {
+            items.push(PaletteItem::Resource(ResourceItem::Table {
+                profile_id,
+                profile_name: profile_name.to_string(),
+                database: Some(database.clone()),
+                schema: table.schema.clone(),
+                name: table.name.clone(),
+            }));
+        }
+        for view in &db_schema.views {
+            items.push(PaletteItem::Resource(ResourceItem::View {
+                profile_id,
+                profile_name: profile_name.to_string(),
+                database: Some(database.clone()),
+                schema: view.schema.clone(),
+                name: view.name.clone(),
+            }));
+        }
+    }
+}
+
+/// Drop resource items that name the same object twice, keeping the first.
+///
+/// The snapshot and the per-database cache can both describe the current
+/// database, and a table listed twice would open the same document from two
+/// rows.
+pub(super) fn dedup_resource_items(items: &mut Vec<PaletteItem>) {
+    let mut seen = std::collections::HashSet::new();
+    items.retain(|item| {
+        let PaletteItem::Resource(resource) = item else {
+            return true;
+        };
+        let key = match resource {
+            ResourceItem::Table {
+                profile_id,
+                database,
+                schema,
+                name,
+                ..
+            } => format!("table|{profile_id}|{database:?}|{schema:?}|{name}"),
+            ResourceItem::View {
+                profile_id,
+                database,
+                schema,
+                name,
+                ..
+            } => format!("view|{profile_id}|{database:?}|{schema:?}|{name}"),
+            ResourceItem::Collection {
+                profile_id,
+                database,
+                name,
+                ..
+            } => format!("collection|{profile_id}|{database}|{name}"),
+            ResourceItem::KeyValueDb {
+                profile_id,
+                database,
+                ..
+            } => format!("keyspace|{profile_id}|{database}"),
+        };
+        seen.insert(key)
+    });
+}
+
 /// Map a `PaletteItem` to its corresponding `PaletteSelection`.
 ///
 /// Separated from `CommandPalette` for testability — pure data transformation.
@@ -799,6 +882,18 @@ impl Workspace {
                         window,
                         cx,
                     );
+                    // The palette found the table by name; show where it lives.
+                    this.sidebar.update(cx, |sidebar, cx| {
+                        if !sidebar.reveal_table(
+                            *profile_id,
+                            database.as_deref(),
+                            table.schema.as_deref(),
+                            &table.name,
+                            cx,
+                        ) {
+                            log::debug!("table {} not present in the sidebar tree", table.name);
+                        }
+                    });
                 }
                 PaletteSelection::OpenCollection {
                     profile_id,
@@ -812,6 +907,19 @@ impl Workspace {
                         window,
                         cx,
                     );
+                    this.sidebar.update(cx, |sidebar, cx| {
+                        if !sidebar.reveal_collection(
+                            *profile_id,
+                            &collection.database,
+                            &collection.name,
+                            cx,
+                        ) {
+                            log::debug!(
+                                "collection {} not present in the sidebar tree",
+                                collection.name
+                            );
+                        }
+                    });
                 }
                 PaletteSelection::OpenKeyValue {
                     profile_id,
@@ -1846,6 +1954,11 @@ impl Workspace {
         // (see `palette_command_keycaps`). An explicit shortcut is only
         // needed for a command the keymap does not bind itself.
         vec![
+            PaletteCommand::new(
+                "search_databases",
+                dbflux_i18n::t!("palette.command.search_databases.name"),
+                dbflux_i18n::t!("palette.category.connections"),
+            ),
             // Editor
             PaletteCommand::new(
                 "new_query_tab",
@@ -2298,6 +2411,184 @@ impl Workspace {
             });
             self.set_focus(self.focus_target, window, cx);
         }
+    }
+
+    /// Open the palette narrowed to connections and everything inside them.
+    ///
+    /// This is the Primary+P search: one query matched anywhere in the name
+    /// across every connected database, without commands and scripts in the
+    /// way. Pressing the shortcut while the palette is open closes it.
+    pub fn search_databases(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.command_palette.read(cx).is_visible() {
+            self.command_palette.update(cx, |palette, cx| {
+                palette.hide(cx);
+            });
+            self.set_focus(self.focus_target, window, cx);
+            return;
+        }
+
+        let items = self.build_database_search_items(cx);
+        self.command_palette.update(cx, |palette, cx| {
+            palette.open_with_items_and_placeholder(
+                items,
+                dbflux_i18n::t!("palette.search.databases_placeholder").into(),
+                window,
+                cx,
+            );
+        });
+
+        self.load_missing_database_schemas(cx);
+    }
+
+    /// Fetch the schema of every connected database that has not been loaded
+    /// yet, and grow the open palette as the results land.
+    ///
+    /// Servers that load one database at a time only know the table names of
+    /// databases the user has expanded in the sidebar, which made a search
+    /// meant to cover everything depend on where the user had clicked first.
+    /// The core refuses the request for drivers that load their whole schema
+    /// on connect, so this stays driver-agnostic: it asks, and skips whatever
+    /// is refused.
+    fn load_missing_database_schemas(&mut self, cx: &mut Context<Self>) {
+        let targets: Vec<(uuid::Uuid, String)> = {
+            let app_state = self.app_state.read(cx);
+            app_state
+                .connections()
+                .iter()
+                .flat_map(|(&profile_id, connected)| {
+                    connected
+                        .schema
+                        .iter()
+                        .flat_map(|schema| schema.databases())
+                        .map(move |database| (profile_id, database.name.clone()))
+                        .collect::<Vec<_>>()
+                })
+                .filter(|(profile_id, database)| {
+                    app_state.needs_database_schema(*profile_id, database)
+                })
+                .collect()
+        };
+
+        for (profile_id, database) in targets {
+            if self.app_state.read(cx).is_background_task_limit_reached() {
+                log::info!("skipping the remaining schema prefetches: task limit reached");
+                break;
+            }
+
+            let params = match self.app_state.update(cx, |state, _cx| {
+                if state.is_operation_pending(profile_id, Some(&database)) {
+                    return Err("a fetch is already running".to_string());
+                }
+                let params = state
+                    .prepare_fetch_database_schema(profile_id, &database)
+                    .map_err(|error| error.to_string())?;
+                if !state.start_pending_operation(profile_id, Some(&database)) {
+                    return Err("another task claimed it first".to_string());
+                }
+                Ok(params)
+            }) {
+                Ok(params) => params,
+                Err(reason) => {
+                    // Expected for drivers that load everything up front and
+                    // for databases the sidebar is already fetching.
+                    log::debug!("not prefetching {database}: {reason}");
+                    continue;
+                }
+            };
+
+            let app_state = self.app_state.clone();
+            let database_for_task = database.clone();
+            let fetch = cx
+                .background_executor()
+                .spawn(async move { params.execute() });
+
+            cx.spawn(async move |workspace, cx| {
+                let result = fetch.await;
+
+                cx.update(|cx| {
+                    app_state.update(cx, |state, cx| {
+                        state.finish_pending_operation(profile_id, Some(&database_for_task));
+
+                        match result {
+                            Ok(fetched) => {
+                                state.set_database_schema(
+                                    fetched.profile_id,
+                                    fetched.database,
+                                    fetched.schema,
+                                );
+                            }
+                            Err(error) => {
+                                // No toast: the user asked to search, not to
+                                // open this database, and one unreachable
+                                // database should not interrupt the search.
+                                log::warn!(
+                                    "could not load the schema of {database_for_task}: {error}"
+                                );
+                            }
+                        }
+
+                        cx.emit(AppStateChanged);
+                    });
+
+                    // The workspace is gone only when its window closed, and
+                    // then there is no palette left to refresh.
+                    if let Err(error) = workspace.update(cx, |workspace, cx| {
+                        let items = workspace.build_database_search_items(cx);
+                        workspace.command_palette.update(cx, |palette, cx| {
+                            palette.refresh_items(items, cx);
+                        });
+                    }) {
+                        log::debug!("database search closed before {database}: {error}");
+                    }
+                });
+            })
+            .detach();
+        }
+    }
+
+    /// Connections plus the tables, views, collections and keyspaces of every
+    /// connected one — the searchable universe for [`Self::search_databases`].
+    fn build_database_search_items(&self, cx: &Context<Self>) -> Vec<PaletteItem> {
+        let mut items = Vec::new();
+
+        let app_state = self.app_state.read(cx);
+        let connections = app_state.connections();
+
+        for profile in app_state.profiles() {
+            let icon = app_state.drivers().get(&profile.driver_id()).map(|driver| {
+                let metadata = driver.metadata();
+                (
+                    AppIcon::for_driver(metadata.icon, metadata.category),
+                    DriverIconTone::for_driver(metadata.icon, metadata.category),
+                )
+            });
+            items.push(PaletteItem::Connection {
+                profile_id: profile.id,
+                name: profile.name.clone(),
+                is_connected: connections.contains_key(&profile.id),
+                icon,
+            });
+        }
+
+        for (&profile_id, connected) in connections.iter() {
+            if let Some(schema) = &connected.schema {
+                build_resource_items_from_schema(
+                    profile_id,
+                    &connected.profile.name,
+                    &schema.structure,
+                    &mut items,
+                );
+            }
+            build_resource_items_from_database_schemas(
+                profile_id,
+                &connected.profile.name,
+                &connected.database_schemas,
+                &mut items,
+            );
+        }
+
+        dedup_resource_items(&mut items);
+        items
     }
 
     /// Build the palette item list from current app state.
