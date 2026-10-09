@@ -120,6 +120,14 @@ pub enum DocumentState {
     Error,
 }
 
+/// What a tab is grouped under in the tab bar: the database it belongs to,
+/// and the colour the user picked for its connection, if any.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TabGroup {
+    pub database: gpui::SharedString,
+    pub color: Option<dbflux_core::ProfileColor>,
+}
+
 /// Metadata snapshot for TabBar (cheap Clone).
 #[derive(Clone, Debug)]
 pub struct DocumentMetaSnapshot {

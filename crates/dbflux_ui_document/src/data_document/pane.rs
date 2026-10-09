@@ -186,7 +186,15 @@ impl DataDocument {
 
         handle.tab_group = Some({
             let e = entity.clone();
-            Box::new(move |cx| e.read(cx).group_label(cx).map(Into::into))
+            Box::new(move |cx| {
+                let document = e.read(cx);
+                document
+                    .group_label(cx)
+                    .map(|database| crate::types::TabGroup {
+                        database: database.into(),
+                        color: document.group_color(cx),
+                    })
+            })
         });
 
         handle.tab_tooltip = Some({

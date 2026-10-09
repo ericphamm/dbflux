@@ -601,6 +601,33 @@ impl ChromeColors {
     }
 }
 
+/// The palette a user picks a connection colour from.
+///
+/// Fixed values rather than theme colours, and deliberately so: the same
+/// choice has to read the same in the sidebar and in the band above the tabs,
+/// and it carries a label on top of it, so each hue is chosen to stay legible
+/// against dark and light chrome alike. Adding a hue here means adding a
+/// variant to `ProfileColor`, which is what makes it storable.
+pub struct ProfileColors;
+
+impl ProfileColors {
+    /// The colour for a user's choice.
+    pub fn resolve(color: dbflux_core::ProfileColor) -> Hsla {
+        use dbflux_core::ProfileColor;
+
+        match color {
+            ProfileColor::Blue => rgb(0x569CD6).into(),
+            ProfileColor::Teal => rgb(0x4EC9B0).into(),
+            ProfileColor::Green => rgb(0x8CC265).into(),
+            ProfileColor::Yellow => rgb(0xDCDCAA).into(),
+            ProfileColor::Orange => rgb(0xCE9178).into(),
+            ProfileColor::Red => rgb(0xE06C75).into(),
+            ProfileColor::Purple => rgb(0xC586C0).into(),
+            ProfileColor::Pink => rgb(0xE58AC9).into(),
+        }
+    }
+}
+
 /// Syntax roles of the Bolt Byzantium palette, per variant.
 ///
 /// The code editor's highlight theme and the schema-tree icons both read these

@@ -486,6 +486,8 @@ impl ContextMenuItem {
 
 #[derive(Clone)]
 pub enum ContextMenuAction {
+    /// Paint this connection with a colour, or clear it back to automatic.
+    SetProfileColor(Option<dbflux_core::ProfileColor>),
     Open,
     OpenChildPicker,
     ViewSchema,
@@ -670,6 +672,9 @@ impl ContextMenuAction {
             Self::Edit => Some(AppIcon::Pencil),
             Self::Duplicate => Some(AppIcon::Copy),
             Self::Delete => Some(AppIcon::Delete),
+            // The icon set has no palette or paint glyph, and adding an asset
+            // for one menu row is not worth it.
+            Self::SetProfileColor(_) => Some(AppIcon::Image),
             Self::Export => Some(AppIcon::ArrowUp),
             Self::OpenDatabase => Some(AppIcon::Database),
             Self::CloseDatabase => Some(AppIcon::Database),

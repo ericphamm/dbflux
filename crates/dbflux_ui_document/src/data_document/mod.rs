@@ -364,6 +364,21 @@ impl DataDocument {
         }
     }
 
+    /// Colour the user picked for this document's connection, if any.
+    ///
+    /// The tab band prefers it over the colour it derives from the names, so
+    /// the band and the connection's square in the sidebar agree.
+    pub fn group_color(&self, cx: &App) -> Option<dbflux_core::ProfileColor> {
+        let profile_id = self.connection_id(cx)?;
+        let grid = self.data_grid.read(cx);
+        grid.app_state()
+            .read(cx)
+            .profiles()
+            .iter()
+            .find(|profile| profile.id == profile_id)
+            .and_then(|profile| profile.color)
+    }
+
     /// The qualified name the tab title leaves out, for its tooltip.
     pub fn qualified_name(&self, cx: &App) -> Option<String> {
         match self.data_grid.read(cx).source() {

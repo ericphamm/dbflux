@@ -69,7 +69,7 @@ pub use manager::{
 #[allow(deprecated)]
 pub use profile::{
     ConnectionEnvironment, ConnectionMcpGovernance, ConnectionMcpPolicyBinding, ConnectionProfile,
-    DbConfig, DbKind, InfluxVersion, NavigatorView, SshAuthMethod, SshTunnelConfig,
+    DbConfig, DbKind, InfluxVersion, NavigatorView, ProfileColor, SshAuthMethod, SshTunnelConfig,
     SshTunnelProfile, SslInfo, SslMode, TestConnectionResult, ssl_mode_from_id,
     ssl_mode_id_is_cert_active, ssl_mode_id_requires_root_cert, ssl_mode_requires_root_cert,
 };

@@ -3578,6 +3578,11 @@ impl DataGridPanel {
         &self.result
     }
 
+    /// The shared application state this panel reads connections from.
+    pub fn app_state(&self) -> &Entity<AppStateEntity> {
+        &self.app_state
+    }
+
     pub fn source(&self) -> &DataSource {
         &self.source
     }

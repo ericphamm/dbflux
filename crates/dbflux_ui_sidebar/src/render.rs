@@ -273,6 +273,7 @@ impl Sidebar {
             active_id: None,
             profile_icons: HashMap::new(),
             profile_icon_colors: HashMap::new(),
+            profile_colors: HashMap::new(),
             connection_latencies: HashMap::new(),
             active_databases: HashMap::new(),
             sidebar_entity: sidebar_entity.clone(),
@@ -400,6 +401,12 @@ impl Render for Sidebar {
             })
             .collect();
 
+        let profile_colors: HashMap<Uuid, dbflux_core::ProfileColor> = state
+            .profiles()
+            .iter()
+            .filter_map(|profile| profile.color.map(|color| (profile.id, color)))
+            .collect();
+
         let profile_icon_colors: HashMap<Uuid, Hsla> = state
             .profiles()
             .iter()
@@ -466,6 +473,7 @@ impl Render for Sidebar {
             active_id,
             profile_icons,
             profile_icon_colors,
+            profile_colors,
             connection_latencies: measured_latencies(&self.connection_latencies),
             active_databases,
             sidebar_entity: sidebar_entity.clone(),
