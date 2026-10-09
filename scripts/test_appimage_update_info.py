@@ -15,7 +15,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 HELPER = ROOT / "scripts/appimage-update-info.sh"
 WORKFLOWS = ROOT / ".github/workflows"
 
-OWNER = "0xErwin1"
+OWNER = "ericphamm"
 REPO = "dbflux"
 
 STABLE = {

@@ -114,7 +114,7 @@ impl KeyringSecretStore {
                 *hold = Some(Instant::now() + WRITE_RETRY_COOLDOWN);
                 if !was_on_hold {
                     log::warn!(
-                        "Secret service did not answer '{label}'; DBFlux stops writing to the \
+                        "Secret service did not answer '{label}'; DBSpeed stops writing to the \
                          keyring for {WRITE_RETRY_COOLDOWN:?} and tries again after that. Unlock \
                          the keyring, or save the connection without storing its password."
                     );

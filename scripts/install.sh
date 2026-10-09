@@ -4,16 +4,16 @@
 #
 # Usage:
 #   Local (from repo):    ./install.sh [--prefix /usr/local]
-#   Remote (curl):        curl -fsSL https://raw.githubusercontent.com/0xErwin1/dbflux/main/scripts/install.sh | bash
+#   Remote (curl):        curl -fsSL https://raw.githubusercontent.com/ericphamm/dbflux/main/scripts/install.sh | bash
 #   Remote with options:  curl -fsSL <url> | bash -s -- --prefix ~/.local
 #
 
 set -euo pipefail
 
 # Configuration
-REPO_URL="https://github.com/0xErwin1/dbflux"
-INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/0xErwin1/dbflux/main/scripts/install.sh"
-UNINSTALL_SCRIPT_URL="https://raw.githubusercontent.com/0xErwin1/dbflux/main/scripts/uninstall.sh"
+REPO_URL="https://github.com/ericphamm/dbflux"
+INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/ericphamm/dbflux/main/scripts/install.sh"
+UNINSTALL_SCRIPT_URL="https://raw.githubusercontent.com/ericphamm/dbflux/main/scripts/uninstall.sh"
 APP_NAME="dbflux"
 DEFAULT_PREFIX="/usr/local"
 
@@ -318,7 +318,7 @@ download_required() {
 
 # Get latest release version from GitHub
 get_latest_version() {
-    local api_url="https://api.github.com/repos/0xErwin1/dbflux/releases/latest"
+    local api_url="https://api.github.com/repos/ericphamm/dbflux/releases/latest"
     local response
 
     if ! response=$(download "$api_url" -); then

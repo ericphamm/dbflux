@@ -78,7 +78,7 @@ fn parse_mcp_args(args: &[String]) -> Result<dbflux_mcp_server::McpServerArgs, S
 fn print_mcp_help() {
     eprintln!("Usage: dbflux mcp --client-id <id> [options]");
     eprintln!();
-    eprintln!("Run DBFlux as an MCP (Model Context Protocol) server for AI clients.");
+    eprintln!("Run DBSpeed as an MCP (Model Context Protocol) server for AI clients.");
     eprintln!();
     eprintln!("Options:");
     eprintln!("  --client-id <id>      Identifier for this AI client (required)");

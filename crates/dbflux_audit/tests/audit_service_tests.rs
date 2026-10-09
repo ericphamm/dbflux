@@ -641,7 +641,7 @@ fn system_startup_and_shutdown_events_record_successfully() {
                 EventOutcome::Success,
             )
             .with_typed_action(SYSTEM_STARTUP)
-            .with_summary("DBFlux application started")
+            .with_summary("DBSpeed application started")
             .with_actor_id("system"),
         )
         .expect("startup event should record");
@@ -655,7 +655,7 @@ fn system_startup_and_shutdown_events_record_successfully() {
                 EventOutcome::Success,
             )
             .with_typed_action(SYSTEM_SHUTDOWN)
-            .with_summary("DBFlux application initiating shutdown")
+            .with_summary("DBSpeed application initiating shutdown")
             .with_actor_id("system"),
         )
         .expect("shutdown event should record");

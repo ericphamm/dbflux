@@ -35,7 +35,7 @@ pub const SELF_APPROVAL_FORBIDDEN_CODE: &str = "self_approval_forbidden";
 /// the DBFlux UI, never by the agent whose calls are waiting.
 pub const HUMAN_ONLY_APPROVAL_TOOLS: &[&str] = &["approve_execution", "reject_execution"];
 
-const SELF_APPROVAL_FORBIDDEN_REASON: &str = "MCP clients cannot approve or reject pending executions; a person resolves them in DBFlux (Pending Approvals)";
+const SELF_APPROVAL_FORBIDDEN_REASON: &str = "MCP clients cannot approve or reject pending executions; a person resolves them in DBSpeed (Pending Approvals)";
 
 const APPROVAL_REQUIRED_REASON: &str = "classification requires approval by policy";
 

@@ -11,7 +11,7 @@ let
   # (e.g. a home-manager `buildEnv`) without colliding on `bin/dbflux`.
   isNightly = pkgs.lib.hasInfix "nightly" version;
   appId = if isNightly then "dbflux-nightly" else "dbflux";
-  appName = if isNightly then "DBFlux Nightly" else "DBFlux";
+  appName = if isNightly then "DBSpeed Nightly" else "DBSpeed";
   brandDir = if isNightly then "nightly" else "stable";
 
   # Build inputs needed at runtime
@@ -209,7 +209,7 @@ let
 
     meta = with pkgs.lib; {
       description = "A fast, keyboard-first database client";
-      homepage = "https://github.com/0xErwin1/dbflux";
+      homepage = "https://github.com/ericphamm/dbflux";
       license = with licenses; [
         mit
         asl20

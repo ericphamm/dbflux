@@ -315,20 +315,20 @@ fn ensure_read_only(sql: &str) -> Result<(), DbError> {
 
     if is_select_into(sql) {
         return Err(DbError::NotSupported(
-            "Amazon Redshift connections are read-only in DBFlux; SELECT ... INTO creates a table and is not supported".to_string(),
+            "Amazon Redshift connections are read-only in DBSpeed; SELECT ... INTO creates a table and is not supported".to_string(),
         ));
     }
 
     if let Some(keyword) = nested_write_keyword(sql) {
         return Err(DbError::NotSupported(format!(
-            "Amazon Redshift connections are read-only in DBFlux; {keyword} is not supported"
+            "Amazon Redshift connections are read-only in DBSpeed; {keyword} is not supported"
         )));
     }
 
     match classify_query_for_language(&QueryLanguage::Sql, sql) {
         ExecutionClassification::Read | ExecutionClassification::Metadata => Ok(()),
         _ => Err(DbError::NotSupported(
-            "Amazon Redshift connections are read-only in DBFlux; only SELECT/EXPLAIN/SHOW statements are supported".to_string(),
+            "Amazon Redshift connections are read-only in DBSpeed; only SELECT/EXPLAIN/SHOW statements are supported".to_string(),
         )),
     }
 }

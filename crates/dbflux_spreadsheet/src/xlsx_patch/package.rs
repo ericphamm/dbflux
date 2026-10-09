@@ -233,7 +233,7 @@ pub(crate) fn xml_reader(xml: &[u8]) -> Result<Reader<&[u8]>, SheetWriteError> {
         .any(|mark| xml.starts_with(mark))
     {
         return Err(SheetWriteError::malformed(
-            "the package has a UTF-16 part, which DBFlux does not patch",
+            "the package has a UTF-16 part, which DBSpeed does not patch",
         ));
     }
 

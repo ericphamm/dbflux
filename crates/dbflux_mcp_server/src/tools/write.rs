@@ -27,7 +27,7 @@ use crate::{
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct InsertRecordParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table or collection name")]
@@ -42,7 +42,7 @@ pub struct InsertRecordParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UpdateRecordsParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table or collection name")]
@@ -60,7 +60,7 @@ pub struct UpdateRecordsParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct UpsertRecordParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table or collection name")]

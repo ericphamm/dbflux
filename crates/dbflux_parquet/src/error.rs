@@ -27,11 +27,11 @@ pub enum ParquetError {
     FooterTooLarge { length: u64, limit: u64 },
 
     /// A column chunk is compressed with a codec this build cannot decode.
-    #[error("column `{column}` is compressed with {codec}, which DBFlux cannot read")]
+    #[error("column `{column}` is compressed with {codec}, which DBSpeed cannot read")]
     UnsupportedCodec { codec: String, column: String },
 
     /// The file uses Parquet modular encryption.
-    #[error("the Parquet file is encrypted, which DBFlux cannot read")]
+    #[error("the Parquet file is encrypted, which DBSpeed cannot read")]
     Encrypted,
 
     /// The footer, page index or column data does not decode as valid

@@ -63,15 +63,15 @@ jobs:
       - name: Resolve channel identity
         run: |
           if [ "${{ inputs.channel }}" = "nightly" ]; then
-            echo "APP_ID=dbflux-nightly"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux Nightly"          >> "$GITHUB_ENV"
-            echo "PKG_NAME=dbflux-nightly"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux.nightly" >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed-nightly"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed Nightly"          >> "$GITHUB_ENV"
+            echo "PKG_NAME=dbspeed-nightly"          >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed.nightly" >> "$GITHUB_ENV"
           else
-            echo "APP_ID=dbflux"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux"          >> "$GITHUB_ENV"
-            echo "PKG_NAME=dbflux"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux" >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed"          >> "$GITHUB_ENV"
+            echo "PKG_NAME=dbspeed"          >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed" >> "$GITHUB_ENV"
           fi
           BRAND_DIR="resources/branding/${{ inputs.channel }}"
           [ -d "$BRAND_DIR" ] || BRAND_DIR="resources/branding/stable"
@@ -159,7 +159,7 @@ jobs:
           free -h
           df -h /
 
-      - name: Build DBFlux
+      - name: Build DBSpeed
         # No --locked here: the version stamp above mutates Cargo.toml, so cargo must
         # refresh the workspace entries in Cargo.lock. Dependency-lock integrity is
         # already enforced by the deterministic-tests and clippy gates (--locked) on
@@ -533,15 +533,15 @@ jobs:
       - name: Resolve channel identity
         run: |
           if [ "${{ inputs.channel }}" = "nightly" ]; then
-            echo "APP_ID=dbflux-nightly"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux Nightly"          >> "$GITHUB_ENV"
-            echo "PKG_NAME=dbflux-nightly"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux.nightly" >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed-nightly"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed Nightly"          >> "$GITHUB_ENV"
+            echo "PKG_NAME=dbspeed-nightly"          >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed.nightly" >> "$GITHUB_ENV"
           else
-            echo "APP_ID=dbflux"            >> "$GITHUB_ENV"
-            echo "APP_NAME=DBFlux"          >> "$GITHUB_ENV"
-            echo "PKG_NAME=dbflux"          >> "$GITHUB_ENV"
-            echo "BUNDLE_ID=dev.iperez.dbflux" >> "$GITHUB_ENV"
+            echo "APP_ID=dbspeed"            >> "$GITHUB_ENV"
+            echo "APP_NAME=DBSpeed"          >> "$GITHUB_ENV"
+            echo "PKG_NAME=dbspeed"          >> "$GITHUB_ENV"
+            echo "BUNDLE_ID=io.github.ericphamm.dbspeed" >> "$GITHUB_ENV"
           fi
           BRAND_DIR="resources/branding/${{ inputs.channel }}"
           [ -d "$BRAND_DIR" ] || BRAND_DIR="resources/branding/stable"
@@ -590,7 +590,7 @@ jobs:
           grep -qF "version = \"${VERSION}\"" Cargo.toml \
             || { echo "::error::Version stamp did not apply."; exit 1; }
 
-      - name: Build DBFlux
+      - name: Build DBSpeed
         # vendored-openssl makes ssh2/libssh2 compile OpenSSL from source for the
         # target instead of linking the runner's system OpenSSL. Required to
         # cross-compile x86_64 on the Apple Silicon runner (no x86_64 OpenSSL is
@@ -805,11 +805,11 @@ jobs:
         shell: pwsh
         run: |
           if ("${{ inputs.channel }}" -eq "nightly") {
-            "APP_NAME=DBFlux Nightly"   | Out-File -FilePath $env:GITHUB_ENV -Append
-            "MY_APP_ID={{7F1C2A3B-4D5E-6F70-8192-A3B4C5D6E7F8}" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "APP_NAME=DBSpeed Nightly"   | Out-File -FilePath $env:GITHUB_ENV -Append
+            "MY_APP_ID={{A7C31E58-2B6D-4F9A-9E1C-6D0B8F4A2E17}" | Out-File -FilePath $env:GITHUB_ENV -Append
           } else {
-            "APP_NAME=DBFlux"   | Out-File -FilePath $env:GITHUB_ENV -Append
-            "MY_APP_ID={{D8A3E981-6A8D-4B8F-9E09-86D8DEB7A6F1}" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "APP_NAME=DBSpeed"   | Out-File -FilePath $env:GITHUB_ENV -Append
+            "MY_APP_ID={{4F0B2C6A-9D1E-4B7A-8C3F-2E5D7A9B1C43}" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
 
       - name: Install Rust toolchain
@@ -852,7 +852,7 @@ jobs:
             exit 1
           }
 
-      - name: Build DBFlux
+      - name: Build DBSpeed
         # No --locked: the version stamp above mutates Cargo.toml; see the Linux build
         # step for the full rationale.
         run: cargo build --release --features "$env:FEATURES" --target x86_64-pc-windows-msvc

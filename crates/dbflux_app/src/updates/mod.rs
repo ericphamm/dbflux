@@ -24,10 +24,10 @@ pub use settings::{UpdateSettings, load_update_settings, save_update_settings};
 pub use startup::{StartupDialog, record_startup, startup_dialog};
 
 /// `owner/name` of the GitHub repository releases are published to.
-pub const REPOSITORY: &str = "0xErwin1/dbflux";
+pub const REPOSITORY: &str = "ericphamm/dbflux";
 
 /// Human-facing page listing every release in the repository changelog.
-pub const FULL_CHANGELOG_URL: &str = "https://github.com/0xErwin1/dbflux/blob/main/CHANGELOG.md";
+pub const FULL_CHANGELOG_URL: &str = "https://github.com/ericphamm/dbflux/blob/main/CHANGELOG.md";
 
 /// Version of the running build, as stamped by CI before compiling.
 pub fn current_version() -> &'static str {

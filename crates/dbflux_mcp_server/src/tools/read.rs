@@ -81,7 +81,7 @@ pub struct AggregationSpec {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct SelectDataParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table or collection name")]
@@ -134,7 +134,7 @@ impl SelectDataParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct CountRecordsParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table or collection name")]
@@ -149,7 +149,7 @@ pub struct CountRecordsParams {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct AggregateDataParams {
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Table or collection name")]
