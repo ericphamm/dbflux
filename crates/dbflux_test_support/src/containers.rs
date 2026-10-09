@@ -440,6 +440,12 @@ pub struct MinioConfig {
 /// MinIO has moved its startup banner between stdout and stderr across
 /// releases, so a log-line wait times out depending on the image version.
 /// The image tag is pinned for the same reason.
+///
+/// The image is Bitnami's legacy build of MinIO: the `minio/minio` images
+/// were withdrawn from Docker Hub in 2025 and quay.io now requires a login,
+/// so this is the last public registry that still serves the server. Its
+/// entrypoint starts `minio server` itself with the data directory it ships,
+/// so no command is passed.
 pub fn with_minio_endpoint<T, E, F>(run: F) -> Result<T, E>
 where
     E: From<dbflux_core::DbError>,
@@ -448,12 +454,11 @@ where
     let access_key_id = "minioadmin";
     let secret_access_key = "minioadmin";
 
-    let image = GenericImage::new("minio/minio", "RELEASE.2025-09-07T16-13-09Z")
+    let image = GenericImage::new("bitnamilegacy/minio", "2025.7.23-debian-12-r5")
         .with_exposed_port(ContainerPort::Tcp(9000))
         .with_wait_for(WaitFor::seconds(1))
         .with_env_var("MINIO_ROOT_USER", access_key_id)
-        .with_env_var("MINIO_ROOT_PASSWORD", secret_access_key)
-        .with_cmd(vec!["server".to_string(), "/data".to_string()]);
+        .with_env_var("MINIO_ROOT_PASSWORD", secret_access_key);
 
     let container = image.start().expect("failed to start minio container");
     let port = container
