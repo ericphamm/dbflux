@@ -51,11 +51,11 @@ impl Sidebar {
     /// incrementally typed prefix. Returns whether the keystroke belongs to an
     /// active type-ahead sequence and should therefore be consumed.
     pub fn typeahead_select(&mut self, typed: &str, cx: &mut Context<Self>) -> bool {
+        // Only characters a table name is made of. Punctuation stays with the
+        // keymap: `/` focuses the search, and a sequence must never swallow it.
         if self.active_tab != SidebarTab::Connections
             || typed.is_empty()
-            || typed
-                .chars()
-                .any(|ch| ch.is_control() || ch.is_whitespace())
+            || !typed.chars().all(|ch| ch.is_alphanumeric() || ch == '_')
         {
             return false;
         }
@@ -64,30 +64,32 @@ impl Sidebar {
         let sequence_active = self
             .typeahead_last_input
             .is_some_and(|last| now.duration_since(last) <= Self::TYPEAHEAD_TIMEOUT);
-        if !sequence_active {
-            self.typeahead_query.clear();
-        }
-
-        self.typeahead_query.push_str(&typed.to_lowercase());
-        self.typeahead_last_input = Some(now);
+        let query = if sequence_active {
+            format!("{}{}", self.typeahead_query, typed.to_lowercase())
+        } else {
+            typed.to_lowercase()
+        };
 
         let items = self.build_tree_items_with_overrides(cx);
         let mut visible_index = 0;
-        let mut match_index =
-            Self::find_table_prefix_index(&items, &self.typeahead_query, &mut visible_index);
+        let mut match_index = Self::find_table_prefix_index(&items, &query, &mut visible_index);
+        let mut matched_query = query;
 
         // If the longer sequence has no match, treat the newest character as
         // the beginning of a fresh sequence. This mirrors native list views.
         if match_index.is_none() && sequence_active {
-            self.typeahead_query = typed.to_lowercase();
+            matched_query = typed.to_lowercase();
             visible_index = 0;
-            match_index =
-                Self::find_table_prefix_index(&items, &self.typeahead_query, &mut visible_index);
+            match_index = Self::find_table_prefix_index(&items, &matched_query, &mut visible_index);
         }
 
+        // A letter that selects nothing is not part of a sequence: it goes to
+        // the keymap, and the next one starts afresh.
         let Some(index) = match_index else {
-            return sequence_active;
+            return false;
         };
+        self.typeahead_query = matched_query;
+        self.typeahead_last_input = Some(now);
 
         self.pending_delete_item = None;
         self.tree_state.update(cx, |state, cx| {
