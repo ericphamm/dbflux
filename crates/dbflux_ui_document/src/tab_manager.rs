@@ -118,6 +118,12 @@ impl Tab {
         }
     }
 
+    pub fn tab_group(&self, cx: &App) -> Option<gpui::SharedString> {
+        match self {
+            Tab::Pane(p) => p.tab_group(cx),
+        }
+    }
+
     pub fn refresh_policy(&self, cx: &App) -> RefreshPolicy {
         match self {
             Tab::Pane(p) => p.refresh_policy(cx),

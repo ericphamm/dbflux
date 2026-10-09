@@ -426,6 +426,9 @@ pub struct Workspace {
     /// listener would only see the ones no binding claimed.
     _sidebar_typeahead: Subscription,
 
+    /// Title last handed to the window, so it is only set when it changes.
+    window_title: String,
+
     /// S8 modals — rendered as full-screen overlays via `Modal`.
     modal_delete_connection: Entity<crate::ui::overlays::modals::ModalDeleteConnection>,
     /// "Active query running" prompt shown before a disconnect or quit that
@@ -1785,6 +1788,7 @@ impl Workspace {
             workspace_inspector,
             _workspace_inspector_subscription: workspace_inspector_subscription,
             _sidebar_typeahead: sidebar_typeahead,
+            window_title: String::new(),
             modal_delete_connection,
             modal_active_query,
             pending_active_query: None,
@@ -2410,6 +2414,29 @@ impl Workspace {
                 palette.hide(cx);
             });
             self.set_focus(self.focus_target, window, cx);
+        }
+    }
+
+    /// Name the window after the active document and its database, so the
+    /// title bar and the window list say which table is open — the order
+    /// DBeaver and DbGate use.
+    fn sync_window_title(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let active = self
+            .tab_manager
+            .read(cx)
+            .active_tab()
+            .map(|tab| (tab.meta_snapshot(cx).title, tab.tab_group(cx)));
+
+        let title = crate::ui::document::tab_bar::window_title(
+            active
+                .as_ref()
+                .map(|(title, group)| (title.as_str(), group.as_deref())),
+            dbflux_core::ReleaseChannel::current().display_name(),
+        );
+
+        if title != self.window_title {
+            window.set_window_title(&title);
+            self.window_title = title;
         }
     }
 

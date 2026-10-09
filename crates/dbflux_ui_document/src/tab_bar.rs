@@ -6,12 +6,141 @@ use super::types::{DocumentId, DocumentMetaSnapshot, DocumentState};
 use dbflux_components::composites::{MenuItem, document_tab, document_tab_bar, document_tab_title};
 use dbflux_components::controls::Button;
 use dbflux_components::icons::AppIcon;
+use dbflux_components::primitives::Text;
 use dbflux_components::primitives::{Icon, Status, StatusIndicator};
-use dbflux_components::tokens::{ChromeColors, TabMetrics};
+use dbflux_components::tokens::{ChromeColors, FontSizes, Radii, Spacing, TabMetrics};
 use gpui::prelude::FluentBuilder;
 use gpui::*;
 use gpui_component::ActiveTheme;
 use gpui_component::tooltip::Tooltip;
+use uuid::Uuid;
+
+/// Height of the band above each tab that names the database the tab
+/// belongs to. With the 30 px chip below it the column fills the 46 px bar,
+/// so the bar keeps its height and everything anchored under it stays put.
+const TAB_GROUP_BAND: Pixels = Spacing::LG;
+
+/// Narrowest a tab may get. Tabs never shrink past this, however many are
+/// open — the strip scrolls instead, because a row of four-letter stumps
+/// tells the user nothing about which table each tab holds.
+const TAB_MIN_WIDTH: Pixels = px(140.0);
+
+/// Widest an inactive tab gets before its title is ellipsized.
+const TAB_MAX_WIDTH: Pixels = px(220.0);
+
+/// Widest the active tab gets. Larger than the rest so the table you are
+/// actually looking at shows its whole name.
+const TAB_ACTIVE_MAX_WIDTH: Pixels = px(360.0);
+
+/// Width the tab context menu is assumed to take when deciding whether it
+/// fits: the floor plus room for the longest label ("Close Tabs to the Right").
+pub const TAB_MENU_WIDTH: Pixels = px(220.0);
+
+/// Space kept between the tab context menu and the window edge.
+const TAB_MENU_EDGE_GAP: Pixels = Spacing::SM;
+
+/// Left edge for the tab context menu opened at `click_x`.
+///
+/// Anchored at the click, pulled left when the menu would otherwise run past
+/// the right edge of the window — right-clicking the last tab used to open a
+/// menu half outside the window, where the items were unreachable.
+pub fn clamp_tab_menu_left(click_x: Pixels, menu_width: Pixels, viewport_width: Pixels) -> Pixels {
+    let rightmost = viewport_width - menu_width - TAB_MENU_EDGE_GAP;
+    // `max` last: in a window narrower than the menu, staying attached to the
+    // left edge beats sliding off the left one.
+    click_x.min(rightmost).max(TAB_MENU_EDGE_GAP)
+}
+
+/// Title for the application window: the active document, the database it
+/// belongs to, then the product name — the order DBeaver and DbGate use, so
+/// the part that changes is the part the window list shows first.
+pub fn window_title(document: Option<(&str, Option<&str>)>, product: &str) -> String {
+    match document {
+        Some((title, Some(group))) => format!("{title} - {group} - {product}"),
+        Some((title, None)) => format!("{title} - {product}"),
+        None => product.to_string(),
+    }
+}
+
+/// A tab being dragged to a new position in the bar.
+#[derive(Clone)]
+pub struct TabDrag {
+    /// Where the tab sits right now — the source index for the move.
+    index: usize,
+    label: SharedString,
+}
+
+/// The label that follows the cursor while a tab is dragged.
+struct TabDragPreview {
+    label: SharedString,
+}
+
+impl Render for TabDragPreview {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.theme();
+        div()
+            .bg(theme.tab_bar)
+            .border_1()
+            .border_color(theme.drag_border)
+            .rounded(Radii::SM)
+            .px(Spacing::SM)
+            .py(Spacing::XS)
+            .shadow_md()
+            .child(Text::body(self.label.clone()).font_size(FontSizes::SM))
+    }
+}
+
+/// What makes two neighbouring tabs share a band: same connection, same
+/// database.
+#[derive(Clone, PartialEq, Eq)]
+struct TabGroupKey {
+    connection_id: Option<Uuid>,
+    database: SharedString,
+}
+
+impl TabGroupKey {
+    /// The band's colour, derived from the names.
+    ///
+    /// Drawn from the theme's chart palette so it fits either theme, and from
+    /// a hash rather than a running counter so a database keeps its colour as
+    /// tabs open and close around it.
+    fn color(&self, theme: &gpui_component::theme::Theme) -> Hsla {
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.connection_id.hash(&mut hasher);
+        self.database.hash(&mut hasher);
+        match hasher.finish() % 5 {
+            0 => theme.chart_1,
+            1 => theme.chart_2,
+            2 => theme.chart_3,
+            3 => theme.chart_4,
+            _ => theme.chart_5,
+        }
+    }
+}
+
+/// The band rendered above one tab: coloured when the tab has a database,
+/// labelled only on the first tab of a run so the name reads once per group.
+struct TabGroupBand {
+    color: Option<Hsla>,
+    label: Option<SharedString>,
+}
+
+impl TabGroupBand {
+    fn new(
+        group: Option<&TabGroupKey>,
+        starts_group: bool,
+        theme: &gpui_component::theme::Theme,
+    ) -> Self {
+        Self {
+            color: group.map(|group| group.color(theme)),
+            label: group
+                .filter(|_| starts_group)
+                .map(|group| group.database.clone()),
+        }
+    }
+}
 
 #[allow(dead_code)]
 pub struct TabBar {
@@ -26,6 +155,13 @@ pub struct TabBar {
     // Drag state (for future drag & drop support)
     dragging_tab: Option<DocumentId>,
     drop_target_index: Option<usize>,
+
+    /// Horizontal scroll of the tab strip, so the active tab can be brought
+    /// into view when there are more tabs than fit.
+    scroll_handle: ScrollHandle,
+    /// The tab that was active at the last render; a change means the new
+    /// one has to be scrolled into view.
+    last_active_id: Option<DocumentId>,
 }
 
 #[allow(dead_code)]
@@ -55,6 +191,8 @@ impl TabBar {
             active_tab_center_x: Rc::new(Cell::new(px(0.0))),
             dragging_tab: None,
             drop_target_index: None,
+            scroll_handle: ScrollHandle::new(),
+            last_active_id: None,
         }
     }
 
@@ -231,12 +369,34 @@ impl Render for TabBar {
                     doc.meta_snapshot(cx),
                     doc.change_summary(cx),
                     doc.tab_tooltip(cx),
+                    doc.tab_group(cx),
                 )
             })
             .collect();
 
+        // Bring a newly activated tab into view. Done here rather than on the
+        // activation event so it also covers tabs opened while the bar was
+        // busy elsewhere (the palette, a restored session).
+        if active_id != self.last_active_id {
+            self.last_active_id = active_id;
+            if let Some(index) = tab_data
+                .iter()
+                .position(|(meta, ..)| Some(meta.id) == active_id)
+            {
+                self.scroll_handle.scroll_to_item(index);
+            }
+        }
+
         let mut tabs: Vec<AnyElement> = Vec::with_capacity(tab_data.len());
-        for (idx, (meta, change_summary, tooltip)) in tab_data.into_iter().enumerate() {
+        let mut previous_group: Option<TabGroupKey> = None;
+        for (idx, (meta, change_summary, tooltip, group)) in tab_data.into_iter().enumerate() {
+            let group = group.map(|database| TabGroupKey {
+                connection_id: meta.connection_id,
+                database,
+            });
+            let starts_group = group.is_some() && group != previous_group;
+            let band = TabGroupBand::new(group.as_ref(), starts_group, cx.theme());
+            previous_group = group;
             tabs.push(
                 self.render_tab(
                     meta,
@@ -245,6 +405,7 @@ impl Render for TabBar {
                     idx,
                     active_id,
                     drop_target_index,
+                    band,
                     cx,
                 )
                 .into_any_element(),
@@ -259,9 +420,20 @@ impl Render for TabBar {
                 .role(Role::TabList)
                 .flex()
                 .min_w_0()
-                .items_center()
+                .items_end()
                 .overflow_x_scroll()
+                .track_scroll(&self.scroll_handle)
                 .gap(TabMetrics::DOCUMENT_BAR_GAP)
+                // A drag that ends outside a tab leaves the insertion marker
+                // behind; clearing it here covers every release.
+                .on_mouse_up(
+                    MouseButton::Left,
+                    cx.listener(|this, _, _, cx| {
+                        if this.drop_target_index.take().is_some() {
+                            cx.notify();
+                        }
+                    }),
+                )
                 .children(tabs)
                 .child(new_tab_btn),
         )
@@ -278,6 +450,7 @@ impl TabBar {
         idx: usize,
         active_id: Option<DocumentId>,
         drop_target_index: Option<usize>,
+        band: TabGroupBand,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let id = meta.id;
@@ -307,8 +480,29 @@ impl TabBar {
             document_tab_title(title, false, cx).font_weight(FontWeight::NORMAL)
         };
         let hover_group: SharedString = format!("tab-group-{}", id.0).into();
+        let drag_label: SharedString = meta.title.clone().into();
+        let band_text_color = theme.background;
 
-        document_tab(
+        let band = div()
+            .h(TAB_GROUP_BAND)
+            .w_full()
+            .px(Spacing::SM)
+            .flex()
+            .items_center()
+            .overflow_hidden()
+            .rounded_t(Radii::SM)
+            .when_some(band.color, |el, color| el.bg(color))
+            .when_some(band.label, |el, label| {
+                el.child(
+                    div().flex_1().min_w_0().truncate().child(
+                        Text::caption(label)
+                            .font_size(FontSizes::XS)
+                            .color(band_text_color),
+                    ),
+                )
+            });
+
+        let chip = document_tab(
             ElementId::Name(format!("tab-{}", id.0).into()),
             is_active,
             cx,
@@ -317,8 +511,7 @@ impl TabBar {
         .debug_selector(|| format!("tab-{}", id.0))
         .role(Role::Tab)
         .aria_selected(is_active)
-        .min_w(TabMetrics::DOCUMENT_TAB_MIN_WIDTH)
-        .max_w(TabMetrics::DOCUMENT_TAB_MAX_WIDTH)
+        .w_full()
         .when(is_active, |el| {
             el.child(
                 canvas(
@@ -387,7 +580,54 @@ impl TabBar {
         })
         // Spinner or close button. Inactive tabs show the close button only
         // while hovered.
-        .child(self.render_tab_action(id, is_executing, is_active, hover_group, cx))
+        .child(self.render_tab_action(id, is_executing, is_active, hover_group, cx));
+
+        div()
+            .id(ElementId::Name(format!("tab-column-{}", id.0).into()))
+            .flex()
+            .flex_col()
+            .flex_shrink_0()
+            .min_w(TAB_MIN_WIDTH)
+            .max_w(if is_active {
+                TAB_ACTIVE_MAX_WIDTH
+            } else {
+                TAB_MAX_WIDTH
+            })
+            // Drag to reorder. The payload carries the index the tab started
+            // at, because by drop time the pointer only tells us where it
+            // landed.
+            .on_drag(
+                TabDrag {
+                    index: idx,
+                    label: drag_label,
+                },
+                |drag, _, _, cx| {
+                    cx.new(|_| TabDragPreview {
+                        label: drag.label.clone(),
+                    })
+                },
+            )
+            .drag_over::<TabDrag>({
+                let tab_bar = cx.entity().clone();
+                move |style, _, _, cx| {
+                    tab_bar.update(cx, |this, cx| {
+                        if this.drop_target_index != Some(idx) {
+                            this.drop_target_index = Some(idx);
+                            cx.notify();
+                        }
+                    });
+                    style
+                }
+            })
+            .on_drop(cx.listener(move |this, drag: &TabDrag, _window, cx| {
+                this.drop_target_index = None;
+                this.tab_manager.update(cx, |manager, cx| {
+                    manager.move_tab(drag.index, idx, cx);
+                });
+                cx.notify();
+            }))
+            .child(band)
+            .child(chip)
     }
 
     fn render_tab_action(
@@ -785,5 +1025,46 @@ mod tab_icon_tests {
         assert_eq!(tab_icon(DocumentIcon::Collection), AppIcon::Box);
         assert_eq!(tab_icon(DocumentIcon::Redis), AppIcon::KeyRound);
         assert_eq!(tab_icon(DocumentIcon::SchemaViz), AppIcon::Layers);
+    }
+}
+
+#[cfg(test)]
+mod group_band_tests {
+    use super::{TAB_MENU_EDGE_GAP, clamp_tab_menu_left, window_title};
+    use gpui::px;
+
+    #[test]
+    fn menu_opens_at_the_click_when_it_fits() {
+        assert_eq!(
+            clamp_tab_menu_left(px(100.0), px(220.0), px(1200.0)),
+            px(100.0)
+        );
+    }
+
+    #[test]
+    fn menu_is_pulled_left_of_the_window_edge() {
+        let left = clamp_tab_menu_left(px(1150.0), px(220.0), px(1200.0));
+        assert_eq!(left, px(1200.0) - px(220.0) - TAB_MENU_EDGE_GAP);
+    }
+
+    #[test]
+    fn menu_stays_attached_to_the_left_edge_in_a_narrow_window() {
+        assert_eq!(
+            clamp_tab_menu_left(px(50.0), px(220.0), px(150.0)),
+            TAB_MENU_EDGE_GAP
+        );
+    }
+
+    #[test]
+    fn window_title_leads_with_the_document_then_its_database() {
+        assert_eq!(
+            window_title(Some(("flags", Some("monixa-test"))), "DBFlux"),
+            "flags - monixa-test - DBFlux"
+        );
+        assert_eq!(
+            window_title(Some(("query.sql", None)), "DBFlux"),
+            "query.sql - DBFlux"
+        );
+        assert_eq!(window_title(None, "DBFlux"), "DBFlux");
     }
 }
