@@ -297,7 +297,6 @@ fn results_layer_owns_navigation_and_crud_letters() {
         ('k', Command::SelectPrev),
         ('r', Command::Rename),
         ('o', Command::ResultsAddRow),
-        ('i', Command::ToggleRecordView),
         ('v', Command::ToggleValuePanel),
         ('x', Command::Delete),
     ];
@@ -310,6 +309,23 @@ fn results_layer_owns_navigation_and_crud_letters() {
              typing-vs-grid focus invariant in CodeDocument stays meaningful",
         );
     }
+}
+
+/// Tab switches between the grid and the record view while the results own
+/// the keyboard, and keeps cycling the panels everywhere else.
+#[test]
+fn tab_switches_the_record_view_in_the_results_only() {
+    let keymap = default_keymap();
+    let tab = KeyChord::new("tab", Modifiers::none());
+
+    assert_eq!(
+        keymap.resolve(ContextId::Results, &tab),
+        Some(Command::ToggleRecordView)
+    );
+    assert_eq!(
+        keymap.resolve(ContextId::Global, &tab),
+        Some(Command::CycleFocusForward)
+    );
 }
 
 /// `space` in the Results layer must resolve to `ExpandCollapse`, matching

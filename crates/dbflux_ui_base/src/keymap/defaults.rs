@@ -649,8 +649,10 @@ fn results_layer() -> KeymapLayer {
         KeyChord::new("y", Modifiers::none()),
         Command::ResultsCopyRow,
     );
+    // Tab switches between the grid and the record view while the results
+    // have the keyboard; elsewhere it keeps cycling the panels.
     layer.bind(
-        KeyChord::new("i", Modifiers::none()),
+        KeyChord::new("tab", Modifiers::none()),
         Command::ToggleRecordView,
     );
     layer.bind(
