@@ -12,6 +12,10 @@ impl Workspace {
                 self.toggle_command_palette(window, cx);
                 Some(true)
             }
+            Command::SearchDatabases => {
+                self.search_databases(window, cx);
+                Some(true)
+            }
 
             Command::ToggleTasks => {
                 self.toggle_tasks_panel(cx);
