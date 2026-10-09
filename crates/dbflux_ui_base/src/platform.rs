@@ -315,7 +315,11 @@ pub fn render_csd_window_controls(
 /// Backward-compatible alias: renders the title bar with a fixed "DBFlux" title.
 /// Prefer `render_csd_title_bar` for new code that needs per-window titles.
 pub fn render_linux_title_bar(window: &mut Window, cx: &mut App) -> impl IntoElement + 'static {
-    match render_csd_title_bar(window, cx, "DBFlux") {
+    match render_csd_title_bar(
+        window,
+        cx,
+        dbflux_core::ReleaseChannel::current().display_name(),
+    ) {
         Some(el) => el.into_any_element(),
         None => div().into_any_element(),
     }

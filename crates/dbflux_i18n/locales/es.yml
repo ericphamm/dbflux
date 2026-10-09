@@ -12,7 +12,7 @@ access:
   ssm_instance_id: ID de instancia
   ssm_region: Región
   ssm_remote_port: Puerto remoto
-  ssm_port_hint: DBFlux y el sistema operativo asignan automáticamente el puerto del túnel local. Aquí solo se puede configurar el puerto remoto.
+  ssm_port_hint: DBSpeed y el sistema operativo asignan automáticamente el puerto del túnel local. Aquí solo se puede configurar el puerto remoto.
   auth_profile: Perfil de autenticación
   proxy_no_profiles: No hay perfiles de proxy configurados
   proxy_no_profiles_hint: Agregar proxies en Ajustes > Proxies
@@ -484,7 +484,7 @@ connection_manager:
       cannot_read_file: "No se pudo leer el archivo: %{error}"
       parse_error: "Error de análisis: %{error}"
       encrypted_needs_passphrase: Este paquete está cifrado. Introduce la frase e inténtalo de nuevo.
-      encryption_unavailable: Este paquete está cifrado con frase, pero la función de cifrado no está disponible en esta compilación de DBFlux.
+      encryption_unavailable: Este paquete está cifrado con frase, pero la función de cifrado no está disponible en esta compilación de DBSpeed.
       wrong_passphrase: Frase incorrecta o paquete dañado.
       decryption_error: "Error de descifrado: %{error}"
       import_failed: "Fallo en la importación: %{error}"
@@ -622,8 +622,8 @@ diagnostics:
     repair_action: "La fila almacenada se conservó. Abre Ajustes > Hooks para repararla o recrearla."
   scripts_directory:
     summary: "Los scripts no se pueden guardar en la carpeta de scripts."
-    action: "Las queries nuevas se conservan en el session store, así que tu trabajo está a salvo. Verifica que el directorio de datos sea escribible y tenga espacio libre, y reinicia DBFlux."
-  shutdown_flush_timed_out: "Es posible que algunas ediciones no hayan llegado a sus archivos: DBFlux se quedó sin tiempo para guardarlas al salir. Se conservan en el session store para recuperarlas."
+    action: "Las queries nuevas se conservan en el session store, así que tu trabajo está a salvo. Verifica que el directorio de datos sea escribible y tenga espacio libre, y reinicia DBSpeed."
+  shutdown_flush_timed_out: "Es posible que algunas ediciones no hayan llegado a sus archivos: DBSpeed se quedó sin tiempo para guardarlas al salir. Se conservan en el session store para recuperarlas."
 document:
   collection:
     inspector:
@@ -2052,7 +2052,7 @@ document:
       one: "%{count} celda con fórmula se reemplazará por un valor"
       many: "%{count} celdas con fórmula se reemplazarán por valores"
     read_only:
-      xls: "Este archivo .xls es de solo lectura: DBFlux no puede escribir el formato .xls. Guárdalo como .xlsx para editarlo."
+      xls: "Este archivo .xls es de solo lectura: DBSpeed no puede escribir el formato .xls. Guárdalo como .xlsx para editarlo."
     action:
       append_row: "Agregar fila"
       save: "Guardar"
@@ -2064,7 +2064,7 @@ document:
       input:
         a1_reference: "La celda %{cell} de la hoja %{sheet} tiene una fórmula con una referencia de estilo A1. Un archivo ods usa referencias OpenFormula como [.A1] o [.A1:.B3]. Corrige la fórmula o empieza el valor con ' para guardarlo como texto."
       write:
-        malformed: "El archivo no es un paquete de hoja de cálculo que DBFlux pueda editar en su lugar, así que no se guardó nada."
+        malformed: "El archivo no es un paquete de hoja de cálculo que DBSpeed pueda editar en su lugar, así que no se guardó nada."
         sheet_out_of_range: "La hoja que se estaba guardando ya no está en el archivo. Recarga el archivo y vuelve a editarlo."
         not_a_worksheet: "La hoja %{sheet} no es una hoja de cálculo, así que no tiene celdas para editar."
         cell_out_of_range: "La fila %{row}, columna %{column} de la hoja %{sheet} está más allá de la última celda que puede tener una hoja."
@@ -2078,10 +2078,10 @@ document:
       open_failed: "No se pudo abrir %{name}"
       sheet_failed: "No se pudo leer la hoja %{sheet} de %{name}"
       not_a_spreadsheet: "El archivo no es un libro xlsx, xlsm, xls ni ods."
-      encrypted: "El libro está cifrado o protegido con una contraseña de apertura, y DBFlux no puede leerlo."
+      encrypted: "El libro está cifrado o protegido con una contraseña de apertura, y DBSpeed no puede leerlo."
       chart_sheet: "La hoja %{sheet} es una hoja de gráfico y no tiene celdas que mostrar."
       sheet_out_of_range: "La hoja %{index} no existe. El libro tiene %{count} hojas."
-      sheet_too_large: "La hoja %{sheet} ocupa %{rows} filas por %{columns} columnas, %{cells} celdas, más que las %{limit} celdas que DBFlux carga por hoja."
+      sheet_too_large: "La hoja %{sheet} ocupa %{rows} filas por %{columns} columnas, %{cells} celdas, más que las %{limit} celdas que DBSpeed carga por hoja."
       malformed: "No se pudo decodificar el libro."
     loading: "Cargando %{name}…"
     reading_sheet: "Leyendo la hoja %{sheet}…"
@@ -2123,7 +2123,7 @@ document:
     save_as:
       action: "Guardar como .xlsx"
       title: "¿Guardar como un nuevo archivo .xlsx?"
-      body: "DBFlux escribe los valores de todas las hojas de %{name} en un nuevo archivo .xlsx, que se puede editar. El nuevo archivo no conserva las fórmulas (cada una pasa a ser el valor que muestra, porque DBFlux no puede leer las fórmulas de .xls), el formato, los formatos de número salvo las fechas, las celdas combinadas, el ancho de las columnas, los gráficos, las imágenes ni las macros. %{name} no se modifica."
+      body: "DBSpeed escribe los valores de todas las hojas de %{name} en un nuevo archivo .xlsx, que se puede editar. El nuevo archivo no conserva las fórmulas (cada una pasa a ser el valor que muestra, porque DBSpeed no puede leer las fórmulas de .xls), el formato, los formatos de número salvo las fechas, las celdas combinadas, el ancho de las columnas, los gráficos, las imágenes ni las macros. %{name} no se modifica."
       chart_sheets: "Las hojas de gráfico no tienen celdas y no se escriben: %{sheets}."
       object: "El nuevo archivo se guarda solo en este equipo y no se sube al bucket."
       confirm: "Elegir archivo…"
@@ -2173,7 +2173,7 @@ document:
       downloaded_whole: "descargado completo"
     download:
       title: "¿Descargar el objeto completo?"
-      body: "%{name} ocupa %{size}. Este servicio de almacenamiento no puede leer una parte de un objeto, así que DBFlux lo descarga completo una vez y lee sus filas de esa copia."
+      body: "%{name} ocupa %{size}. Este servicio de almacenamiento no puede leer una parte de un objeto, así que DBSpeed lo descarga completo una vez y lee sus filas de esa copia."
       body_changed: "%{name} cambió desde que se descargó y ahora ocupa %{size}. Este servicio de almacenamiento no puede leer una parte de un objeto, así que recargarlo lo descarga completo otra vez y reemplaza las filas mostradas."
       confirm: "Descargar"
       cancel: "Cancelar"
@@ -2185,9 +2185,9 @@ document:
       source_changed: "El archivo cambió desde que se abrió, así que no se leyeron más filas. Recárgalo para ver su contenido nuevo."
       short_read: "El archivo devolvió menos bytes de los pedidos. Puede haber cambiado mientras se leía."
       not_parquet: "El archivo no está en formato Parquet."
-      footer_too_large: "El pie de Parquet ocupa %{size}, más de los %{limit} que DBFlux lee."
-      unsupported_codec: "La columna %{column} está comprimida con %{codec}, que DBFlux no puede leer."
-      encrypted: "El archivo Parquet está cifrado, y DBFlux no puede leerlo."
+      footer_too_large: "El pie de Parquet ocupa %{size}, más de los %{limit} que DBSpeed lee."
+      unsupported_codec: "La columna %{column} está comprimida con %{codec}, que DBSpeed no puede leer."
+      encrypted: "El archivo Parquet está cifrado, y DBSpeed no puede leerlo."
       malformed: "El archivo no es Parquet válido."
       unindexed_chunk_too_large: "La columna %{column} no tiene índice de páginas, así que mostrar cualquiera de sus filas implica leer su bloque completo de %{size}, más que el límite de %{limit}."
       no_columns_selected: "No se eligió ninguna columna para leer."
@@ -3302,7 +3302,7 @@ form:
     ssm_remote_port_positive: El puerto remoto SSM debe ser mayor que 0
     ssm_remote_port_invalid: El puerto remoto SSM debe ser un número válido
     auth_profile_not_found: "No se encontró el perfil de AWS '%{id}' en ~/.aws/config — restaura o recrea el perfil en ~/.aws/config antes de conectar."
-    auth_profile_dangling_keyring_only: "El perfil de autenticación '%{name}' solo existe en el llavero de DBFlux y ya no tiene una entrada correspondiente en ~/.aws/config o ~/.aws/credentials. Agrega las credenciales a ~/.aws/credentials para conectar con este perfil."
+    auth_profile_dangling_keyring_only: "El perfil de autenticación '%{name}' solo existe en el llavero de DBSpeed y ya no tiene una entrada correspondiente en ~/.aws/config o ~/.aws/credentials. Agrega las credenciales a ~/.aws/credentials para conectar con este perfil."
     auth_profile_dangling: "No se pudo encontrar el perfil de autenticación '%{name}' en ~/.aws/config. Recrea el perfil o actualiza el enlace de la conexión."
     dynamic_auth_profile_required: Las fuentes de valores dinámicos requieren un perfil de autenticación. Selecciona uno en la pestaña Acceso.
     auth_profile_no_provider: "El perfil de autenticación seleccionado '%{name}' no tiene un proveedor registrado para fuentes de valores dinámicos."
@@ -3319,7 +3319,7 @@ form:
     test_cleanup_failed: "Error al limpiar la conexión de prueba: %{error}"
     test_cleanup_warning: "%{primary_error} (advertencia de limpieza: %{cleanup_error})"
     detached_hook_cleanup_failed: "No se pudieron liberar las tareas de hook de prueba independientes para el perfil '%{profile_name}' (%{profile_id}); IDs de tarea con alcance [%{task_ids}]: %{error}"
-    aws_credentials_missing: "No se pudieron resolver las credenciales de AWS para el perfil '%{name}'. Agrega las credenciales a ~/.aws/credentials (o usa variables de entorno / rol de IAM) y vuelve a intentarlo. DBFlux no almacena claves de acceso de AWS: las credenciales se leen directamente desde el SDK de AWS."
+    aws_credentials_missing: "No se pudieron resolver las credenciales de AWS para el perfil '%{name}'. Agrega las credenciales a ~/.aws/credentials (o usa variables de entorno / rol de IAM) y vuelve a intentarlo. DBSpeed no almacena claves de acceso de AWS: las credenciales se leen directamente desde el SDK de AWS."
     pipeline_stage_failed: "Etapa de la canalización '%{stage}': %{source}"
 hooks:
   kind:
@@ -3770,7 +3770,7 @@ settings:
       label: Idioma
       option:
         system: Sistema
-      notice: "Se aplica al reiniciar DBFlux."
+      notice: "Se aplica al reiniciar DBSpeed."
     ui_font_family:
       label: "Fuente de la interfaz"
       help: "Fuente de menús, etiquetas, pestañas y diálogos."
@@ -3959,7 +3959,7 @@ settings:
       open_tab_menu: Abrir menú de pestaña
       move_tab_left: Mover pestaña a la izquierda
       move_tab_right: Mover pestaña a la derecha
-      quit: Salir de DBFlux
+      quit: Salir de DBSpeed
       focus_sidebar: Enfocar barra lateral
       focus_editor: Enfocar editor
       focus_results: Enfocar resultados
@@ -4210,7 +4210,7 @@ settings:
       execution_mode: "Ejecutar como"
       execution_mode_hint: El modo desacoplado se ejecuta en segundo plano y no bloquea la conexión ni la desconexión
       ready_signal: "Señal de listo"
-      ready_signal_hint: DBFlux espera este texto en la salida del hook antes de continuar. Obligatorio para hooks de preconexión desacoplados.
+      ready_signal_hint: DBSpeed espera este texto en la salida del hook antes de continuar. Obligatorio para hooks de preconexión desacoplados.
       cwd: "Directorio de trabajo"
       env: Entorno
       env_hint: Pares CLAVE=valor separados por comas
@@ -4289,7 +4289,7 @@ settings:
     login_completed: "Inicio de sesión del proveedor de autenticación completado para el perfil '%{name}'."
     login_failed: "Error al iniciar sesión del proveedor de autenticación para el perfil '%{name}': %{error}"
     login_cancelled: Inicio de sesión cancelado por el usuario.
-    login_url_panel_description: Abre esta URL en tu navegador para terminar el inicio de sesión. DBFlux continuará automáticamente cuando completes la autenticación.
+    login_url_panel_description: Abre esta URL en tu navegador para terminar el inicio de sesión. DBSpeed continuará automáticamente cuando completes la autenticación.
     open_browser: Abrir navegador
     copy_url: Copiar URL
     login_action: "Iniciar sesión"
@@ -4562,7 +4562,7 @@ settings:
     group:
       service: "Servicio"
     section_title: "Servicios RPC"
-    section_description: "Drivers externos y proveedores de autenticación que DBFlux inicia por RPC. Los cambios se aplican al reiniciar."
+    section_description: "Drivers externos y proveedores de autenticación que DBSpeed inicia por RPC. Los cambios se aplican al reiniciar."
     empty: No hay servicios RPC configurados
     edit_title: Editar servicio RPC
     new_title: Nuevo servicio RPC
@@ -4718,7 +4718,7 @@ settings:
     action:
       save: Guardar
     status:
-      degraded: La auditoría está en pausa porque no se pudo abrir su base de datos. Reinicia DBFlux.
+      degraded: La auditoría está en pausa porque no se pudo abrir su base de datos. Reinicia DBSpeed.
       enabled: Auditoría habilitada
       disabled: Auditoría deshabilitada
     error:
@@ -5224,7 +5224,7 @@ updates:
     hours: "hace %{count} h"
     days: "hace %{count} d"
   toast:
-    title: "DBFlux %{version} está disponible"
+    title: "DBSpeed %{version} está disponible"
     download_body: "Tienes %{current}. La página de descarga se abre en el navegador."
     nix_body: "Tienes %{current}. Se instaló con Nix, así que actualízalo con tu rebuild habitual."
     aur_body: "Tienes %{current}. Se instaló desde AUR, así que actualízalo con tu helper de AUR."
@@ -5244,8 +5244,8 @@ updates:
   whats_new:
     title: Novedades
     releases_since:
-      one: "1 versión desde la última vez que abriste DBFlux"
-      many: "%{count} versiones desde la última vez que abriste DBFlux"
+      one: "1 versión desde la última vez que abriste DBSpeed"
+      many: "%{count} versiones desde la última vez que abriste DBSpeed"
     this_release: La versión que estás usando
     unreleased: Sin publicar
     show_after_update: Mostrar las novedades después de cada actualización
@@ -5253,12 +5253,12 @@ updates:
     close: Cerrar
     empty: No hay cambios registrados para esta versión.
   welcome:
-    title: Te damos la bienvenida a DBFlux
+    title: Te damos la bienvenida a DBSpeed
     tagline: Un cliente pensado para el teclado para SQL, documentos, clave-valor, series temporales y almacenamiento de objetos.
     whats_new: Novedades
     updates: Actualizaciones
     notify: Avisarme cuando salga una nueva versión
-    notify_hint: Al iniciar, DBFlux le pregunta a GitHub por la última versión. No se envía nada sobre ti.
+    notify_hint: Al iniciar, DBSpeed le pregunta a GitHub por la última versión. No se envía nada sobre ti.
     show_whats_new: Mostrar las novedades después de cada actualización
     show_whats_new_hint: Abre este registro de cambios una vez, la primera vez que inicia una versión nueva.
     change_later: Puedes cambiar esto después en Configuración › Actualizaciones

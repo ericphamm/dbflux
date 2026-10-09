@@ -25,7 +25,7 @@ pub struct RequestExecutionParams {
     #[schemars(description = "Tool ID to execute (e.g., 'delete_records', 'drop_table')")]
     pub tool_id: String,
 
-    #[schemars(description = "Connection ID from DBFlux configuration")]
+    #[schemars(description = "Connection ID from DBSpeed configuration")]
     pub connection_id: String,
 
     #[schemars(description = "Tool parameters as JSON object")]
@@ -62,7 +62,7 @@ pub struct RejectExecutionParams {
 #[tool_router(router = approval_router, vis = "pub")]
 impl DbFluxServer {
     #[tool(
-        description = "Queue an operation for approval by a person in DBFlux and return its pending_id. Tell the user to approve it in DBFlux (Workspace > Pending Approvals), wait (MCP clients cannot approve), check it with get_pending_execution, and once approved call the target tool itself with exactly the same params to run it once"
+        description = "Queue an operation for approval by a person in DBSpeed and return its pending_id. Tell the user to approve it in DBSpeed (Workspace > Pending Approvals), wait (MCP clients cannot approve), check it with get_pending_execution, and once approved call the target tool itself with exactly the same params to run it once"
     )]
     async fn request_execution(
         &self,
@@ -117,7 +117,7 @@ impl DbFluxServer {
     }
 
     #[tool(
-        description = "List executions still waiting for a person to approve or reject them in DBFlux. An execution disappears from this list once it is approved, rejected or expired"
+        description = "List executions still waiting for a person to approve or reject them in DBSpeed. An execution disappears from this list once it is approved, rejected or expired"
     )]
     async fn list_pending_executions(
         &self,
@@ -161,7 +161,7 @@ impl DbFluxServer {
     }
 
     #[tool(
-        description = "Check a pending execution by pending_id. While it is returned with status 'pending', it is still waiting for a person to approve it in DBFlux. Status 'rejected' means a person rejected it; 'reason' carries what they wrote, if anything: do not repeat the call unchanged. Once it is no longer found it was approved or expired: repeat the identical original call (same tool, same arguments); an approved call then runs once, otherwise a new request is queued"
+        description = "Check a pending execution by pending_id. While it is returned with status 'pending', it is still waiting for a person to approve it in DBSpeed. Status 'rejected' means a person rejected it; 'reason' carries what they wrote, if anything: do not repeat the call unchanged. Once it is no longer found it was approved or expired: repeat the identical original call (same tool, same arguments); an approved call then runs once, otherwise a new request is queued"
     )]
     async fn get_pending_execution(
         &self,
@@ -204,7 +204,7 @@ impl DbFluxServer {
     }
 
     #[tool(
-        description = "Always denied over MCP: pending executions are approved by a person in DBFlux (Pending Approvals), never by an MCP client"
+        description = "Always denied over MCP: pending executions are approved by a person in DBSpeed (Pending Approvals), never by an MCP client"
     )]
     async fn approve_execution(
         &self,
@@ -278,7 +278,7 @@ impl DbFluxServer {
     }
 
     #[tool(
-        description = "Always denied over MCP: pending executions are rejected by a person in DBFlux (Pending Approvals), never by an MCP client"
+        description = "Always denied over MCP: pending executions are rejected by a person in DBSpeed (Pending Approvals), never by an MCP client"
     )]
     async fn reject_execution(
         &self,
@@ -394,7 +394,7 @@ fn pending_execution_status_response(
             "tool_id": execution.plan.tool_id,
             "connection_id": execution.plan.connection_id,
             "reason": execution.rejection_reason,
-            "message": "A person rejected this execution in DBFlux. It will not run. \
+            "message": "A person rejected this execution in DBSpeed. It will not run. \
                         Repeating the identical call queues a new request.",
         })),
         _ => None,

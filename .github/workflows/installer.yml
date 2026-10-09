@@ -63,7 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag=$(gh release view --repo 0xErwin1/dbflux --json tagName --jq .tagName)
+          tag=$(gh release view --repo ericphamm/dbflux --json tagName --jq .tagName)
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Install from stdin into a user prefix

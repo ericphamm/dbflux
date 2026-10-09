@@ -1100,13 +1100,13 @@ mod group_band_tests {
     #[test]
     fn window_title_leads_with_the_document_then_its_database() {
         assert_eq!(
-            window_title(Some(("flags", Some("monixa-test"))), "DBFlux"),
-            "flags - monixa-test - DBFlux"
+            window_title(Some(("flags", Some("monixa-test"))), "DBSpeed"),
+            "flags - monixa-test - DBSpeed"
         );
         assert_eq!(
-            window_title(Some(("query.sql", None)), "DBFlux"),
-            "query.sql - DBFlux"
+            window_title(Some(("query.sql", None)), "DBSpeed"),
+            "query.sql - DBSpeed"
         );
-        assert_eq!(window_title(None, "DBFlux"), "DBFlux");
+        assert_eq!(window_title(None, "DBSpeed"), "DBSpeed");
     }
 }

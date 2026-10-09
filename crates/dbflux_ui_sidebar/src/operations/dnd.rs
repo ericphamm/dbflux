@@ -223,7 +223,7 @@ impl Sidebar {
     ) -> Result<DatabaseDropReleasePlan, String> {
         if state.connections().get(&profile_id).is_none() {
             return Err(format!(
-                "No active DBFlux connection found for database '{}'",
+                "No active DBSpeed connection found for database '{}'",
                 database
             ));
         }
@@ -235,7 +235,7 @@ impl Sidebar {
                 // Unreachable: the profile existed a moment ago and the take
                 // cannot remove a profile.
                 return Err(format!(
-                    "No active DBFlux connection found for database '{}'",
+                    "No active DBSpeed connection found for database '{}'",
                     database
                 ));
             };
@@ -262,7 +262,7 @@ impl Sidebar {
 
         let Some(connected) = state.connections_mut().get_mut(&profile_id) else {
             return Err(format!(
-                "No active DBFlux connection found for database '{}'",
+                "No active DBSpeed connection found for database '{}'",
                 database
             ));
         };
@@ -276,7 +276,7 @@ impl Sidebar {
                 .is_some_and(|current| current == database)
         {
             return Err(format!(
-                "Cannot drop database '{}' while DBFlux is still connected to it as the current session. Open another database first.",
+                "Cannot drop database '{}' while DBSpeed is still connected to it as the current session. Open another database first.",
                 database
             ));
         }

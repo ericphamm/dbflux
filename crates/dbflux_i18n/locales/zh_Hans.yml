@@ -12,7 +12,7 @@ access:
   ssm_instance_id: 实例 ID
   ssm_region: 区域
   ssm_remote_port: 远程端口
-  ssm_port_hint: DBFlux 和操作系统会自动分配本地隧道端口，此处仅可配置远程端口。
+  ssm_port_hint: DBSpeed 和操作系统会自动分配本地隧道端口，此处仅可配置远程端口。
   auth_profile: 认证配置文件
   proxy_no_profiles: 未配置代理配置
   proxy_no_profiles_hint: 在 设置 > 代理 中添加代理
@@ -484,7 +484,7 @@ connection_manager:
       cannot_read_file: "无法读取文件：%{error}"
       parse_error: "解析错误：%{error}"
       encrypted_needs_passphrase: 此捆绑包已加密。请输入口令后重试。
-      encryption_unavailable: 此捆绑包使用口令加密，但当前版本的 DBFlux 不支持加密功能。
+      encryption_unavailable: 此捆绑包使用口令加密，但当前版本的 DBSpeed 不支持加密功能。
       wrong_passphrase: 口令错误或捆绑包已损坏。
       decryption_error: "解密错误：%{error}"
       import_failed: "导入失败：%{error}"
@@ -622,8 +622,8 @@ diagnostics:
     repair_action: "已保留存储的行。打开设置 > Hooks 进行修复或重新创建。"
   scripts_directory:
     summary: "脚本无法保存到 scripts 文件夹。"
-    action: "新查询会保留在会话存储中，因此你的工作不会丢失。请确认数据目录可写且有剩余空间，然后重启 DBFlux。"
-  shutdown_flush_timed_out: "部分编辑可能未写入文件：退出时 DBFlux 未能及时保存。它们已保留在会话存储中以便恢复。"
+    action: "新查询会保留在会话存储中，因此你的工作不会丢失。请确认数据目录可写且有剩余空间，然后重启 DBSpeed。"
+  shutdown_flush_timed_out: "部分编辑可能未写入文件：退出时 DBSpeed 未能及时保存。它们已保留在会话存储中以便恢复。"
 document:
   collection:
     inspector:
@@ -2052,7 +2052,7 @@ document:
       one: "%{count} 个公式单元格将被替换为值"
       many: "%{count} 个公式单元格将被替换为值"
     read_only:
-      xls: "此 .xls 文件为只读：DBFlux 无法写入 .xls 格式。请将其另存为 .xlsx 后再编辑。"
+      xls: "此 .xls 文件为只读：DBSpeed 无法写入 .xls 格式。请将其另存为 .xlsx 后再编辑。"
     action:
       append_row: "追加行"
       save: "保存"
@@ -2064,7 +2064,7 @@ document:
       input:
         a1_reference: "工作表 %{sheet} 的单元格 %{cell} 中的公式含有 A1 样式的引用。ods 文件使用 [.A1] 或 [.A1:.B3] 这样的 OpenFormula 引用。请修改公式，或在值前加上 ' 以文本形式保存。"
       write:
-        malformed: "该文件不是 DBFlux 能原地编辑的电子表格包，因此未保存任何内容。"
+        malformed: "该文件不是 DBSpeed 能原地编辑的电子表格包，因此未保存任何内容。"
         sheet_out_of_range: "要保存的工作表已不在文件中。请重新加载文件并重新编辑。"
         not_a_worksheet: "工作表 %{sheet} 不是普通工作表，没有可编辑的单元格。"
         cell_out_of_range: "工作表 %{sheet} 的第 %{row} 行第 %{column} 列超出了工作表能容纳的最后一个单元格。"
@@ -2078,10 +2078,10 @@ document:
       open_failed: "无法打开 %{name}"
       sheet_failed: "无法读取 %{name} 的工作表 %{sheet}"
       not_a_spreadsheet: "此文件不是 xlsx、xlsm、xls 或 ods 工作簿。"
-      encrypted: "工作簿已加密或设置了打开密码，DBFlux 无法读取。"
+      encrypted: "工作簿已加密或设置了打开密码，DBSpeed 无法读取。"
       chart_sheet: "工作表 %{sheet} 是图表工作表，没有可显示的单元格。"
       sheet_out_of_range: "工作表 %{index} 不存在。此工作簿有 %{count} 个工作表。"
-      sheet_too_large: "工作表 %{sheet} 跨 %{rows} 行 × %{columns} 列，共 %{cells} 个单元格，超过 DBFlux 每个工作表加载的 %{limit} 个单元格上限。"
+      sheet_too_large: "工作表 %{sheet} 跨 %{rows} 行 × %{columns} 列，共 %{cells} 个单元格，超过 DBSpeed 每个工作表加载的 %{limit} 个单元格上限。"
       malformed: "无法解码此工作簿。"
     loading: "正在加载 %{name}…"
     reading_sheet: "正在读取工作表 %{sheet}…"
@@ -2123,7 +2123,7 @@ document:
     save_as:
       action: "另存为 .xlsx"
       title: "另存为新的 .xlsx 文件？"
-      body: "DBFlux 会将 %{name} 中所有工作表的值写入一个可编辑的新 .xlsx 文件。新文件不保留公式（由于 DBFlux 无法读取 .xls 公式，每个公式都会变成其显示的值）、格式、日期以外的数字格式、合并单元格、列宽、图表、图片和宏。%{name} 不会被修改。"
+      body: "DBSpeed 会将 %{name} 中所有工作表的值写入一个可编辑的新 .xlsx 文件。新文件不保留公式（由于 DBSpeed 无法读取 .xls 公式，每个公式都会变成其显示的值）、格式、日期以外的数字格式、合并单元格、列宽、图表、图片和宏。%{name} 不会被修改。"
       chart_sheets: "图表工作表没有单元格，不会写入：%{sheets}。"
       object: "新文件仅保存在这台电脑上，不会上传到存储桶。"
       confirm: "选择文件…"
@@ -2173,7 +2173,7 @@ document:
       downloaded_whole: "已完整下载"
     download:
       title: "下载整个对象？"
-      body: "%{name} 的大小为 %{size}。此存储服务无法读取对象的一部分，因此 DBFlux 会完整下载一次，并从该副本读取行。"
+      body: "%{name} 的大小为 %{size}。此存储服务无法读取对象的一部分，因此 DBSpeed 会完整下载一次，并从该副本读取行。"
       body_changed: "%{name} 在下载后已更改，现在大小为 %{size}。此存储服务无法读取对象的一部分，因此重新加载会再次完整下载，并替换显示的行。"
       confirm: "下载"
       cancel: "取消"
@@ -2185,9 +2185,9 @@ document:
       source_changed: "文件在打开后已更改，因此没有读取更多行。请重新加载以查看新内容。"
       short_read: "文件返回的字节少于请求的数量。读取期间文件可能已更改。"
       not_parquet: "此文件不是 Parquet 格式。"
-      footer_too_large: "Parquet 页脚为 %{size}，超过 DBFlux 读取的 %{limit}。"
-      unsupported_codec: "列 %{column} 使用 %{codec} 压缩，DBFlux 无法读取。"
-      encrypted: "此 Parquet 文件已加密，DBFlux 无法读取。"
+      footer_too_large: "Parquet 页脚为 %{size}，超过 DBSpeed 读取的 %{limit}。"
+      unsupported_codec: "列 %{column} 使用 %{codec} 压缩，DBSpeed 无法读取。"
+      encrypted: "此 Parquet 文件已加密，DBSpeed 无法读取。"
       malformed: "此文件不是有效的 Parquet。"
       unindexed_chunk_too_large: "列 %{column} 没有页索引，因此显示其任何行都需要读取整个 %{size} 的数据块，超过 %{limit} 的限制。"
       no_columns_selected: "没有选择要读取的列。"
@@ -3302,7 +3302,7 @@ form:
     ssm_remote_port_positive: SSM 远程端口必须大于 0
     ssm_remote_port_invalid: SSM 远程端口必须是有效数字
     auth_profile_not_found: "在 ~/.aws/config 中未找到 AWS 配置文件 %{id}  — 请在连接前在 ~/.aws/config 中恢复或重新创建该配置文件。"
-    auth_profile_dangling_keyring_only: "认证配置文件 %{name} 仅存在于 DBFlux 密钥环中，在 ~/.aws/config 或 ~/.aws/credentials 中已没有对应条目。请将凭据添加到 ~/.aws/credentials 以使用此配置文件连接。"
+    auth_profile_dangling_keyring_only: "认证配置文件 %{name} 仅存在于 DBSpeed 密钥环中，在 ~/.aws/config 或 ~/.aws/credentials 中已没有对应条目。请将凭据添加到 ~/.aws/credentials 以使用此配置文件连接。"
     auth_profile_dangling: "在 ~/.aws/config 中未找到认证配置文件 %{name} 。请重新创建该配置文件或更新连接绑定。"
     dynamic_auth_profile_required: 动态值来源需要认证配置文件。请在访问标签页中选择一个。
     auth_profile_no_provider: "所选认证配置文件 %{name} 没有为动态值来源注册的提供程序。"
@@ -3319,7 +3319,7 @@ form:
     test_cleanup_failed: "测试连接清理失败：%{error}"
     test_cleanup_warning: "%{primary_error}（清理警告：%{cleanup_error}）"
     detached_hook_cleanup_failed: "未能释放配置 %{profile_name}（%{profile_id}）的分离式测试 Hook 任务；作用域任务 ID [%{task_ids}]：%{error}"
-    aws_credentials_missing: "无法解析配置文件 %{name} 的 AWS 凭据。请将凭据添加到 ~/.aws/credentials（或使用环境变量 / IAM 角色）后重试。DBFlux 不存储 AWS 访问密钥 — 凭据由 AWS SDK 直接读取。"
+    aws_credentials_missing: "无法解析配置文件 %{name} 的 AWS 凭据。请将凭据添加到 ~/.aws/credentials（或使用环境变量 / IAM 角色）后重试。DBSpeed 不存储 AWS 访问密钥 — 凭据由 AWS SDK 直接读取。"
     pipeline_stage_failed: "流水线阶段 %{stage}：%{source}"
 hooks:
   kind:
@@ -3770,7 +3770,7 @@ settings:
       label: 语言
       option:
         system: 跟随系统
-      notice: "重启 DBFlux 后生效。"
+      notice: "重启 DBSpeed 后生效。"
     ui_font_family:
       label: "界面字体"
       help: "菜单、标签、标签页和对话框使用的字体。"
@@ -3959,7 +3959,7 @@ settings:
       open_tab_menu: 打开标签页菜单
       move_tab_left: 向左移动标签页
       move_tab_right: 向右移动标签页
-      quit: 退出 DBFlux
+      quit: 退出 DBSpeed
       focus_sidebar: 聚焦侧边栏
       focus_editor: 聚焦编辑器
       focus_results: 聚焦结果
@@ -4210,7 +4210,7 @@ settings:
       execution_mode: "运行方式"
       execution_mode_hint: 分离模式在后台运行，不会阻塞连接 / 断开
       ready_signal: "就绪信号"
-      ready_signal_hint: DBFlux 会等待 Hook 输出中出现此文本后再继续。分离式连接前 Hook 必需。
+      ready_signal_hint: DBSpeed 会等待 Hook 输出中出现此文本后再继续。分离式连接前 Hook 必需。
       cwd: "工作目录"
       env: 环境变量
       env_hint: 逗号分隔的 KEY=value 对
@@ -4289,7 +4289,7 @@ settings:
     login_completed: "配置文件 %{name} 的认证提供程序登录已完成。"
     login_failed: "配置文件 %{name} 的认证提供程序登录失败：%{error}"
     login_cancelled: 登录已被用户取消。
-    login_url_panel_description: 在浏览器中打开此 URL 以完成登录。完成认证后 DBFlux 将自动继续。
+    login_url_panel_description: 在浏览器中打开此 URL 以完成登录。完成认证后 DBSpeed 将自动继续。
     open_browser: 打开浏览器
     copy_url: 复制 URL
     login_action: "登录"
@@ -4562,7 +4562,7 @@ settings:
     group:
       service: "服务"
     section_title: "RPC 服务"
-    section_description: "DBFlux 通过 RPC 启动的外部驱动和认证提供程序。更改在重启后生效。"
+    section_description: "DBSpeed 通过 RPC 启动的外部驱动和认证提供程序。更改在重启后生效。"
     empty: 未配置 RPC 服务
     edit_title: 编辑 RPC 服务
     new_title: 新建 RPC 服务
@@ -4718,7 +4718,7 @@ settings:
     action:
       save: 保存
     status:
-      degraded: 无法打开审计数据库，审计已暂停。请重启 DBFlux。
+      degraded: 无法打开审计数据库，审计已暂停。请重启 DBSpeed。
       enabled: 审计已启用
       disabled: 审计已禁用
     error:
@@ -5222,7 +5222,7 @@ updates:
     hours: "%{count} 小时前"
     days: "%{count} 天前"
   toast:
-    title: "DBFlux %{version} 已发布"
+    title: "DBSpeed %{version} 已发布"
     download_body: "当前版本为 %{current}。下载页面将在浏览器中打开。"
     nix_body: "当前版本为 %{current}。此版本通过 Nix 安装，请使用常用的重新构建方式更新。"
     aur_body: "当前版本为 %{current}。此版本从 AUR 安装，请使用 AUR 助手更新。"
@@ -5242,8 +5242,8 @@ updates:
   whats_new:
     title: 新功能
     releases_since:
-      one: "自上次打开 DBFlux 以来有 1 个版本"
-      many: "自上次打开 DBFlux 以来有 %{count} 个版本"
+      one: "自上次打开 DBSpeed 以来有 1 个版本"
+      many: "自上次打开 DBSpeed 以来有 %{count} 个版本"
     this_release: 当前运行的版本
     unreleased: 未发布
     show_after_update: 每次更新后显示新功能
@@ -5251,12 +5251,12 @@ updates:
     close: 关闭
     empty: 此版本没有记录的变更。
   welcome:
-    title: 欢迎使用 DBFlux
+    title: 欢迎使用 DBSpeed
     tagline: 面向键盘操作的客户端，支持 SQL、文档、键值、时间序列和对象存储。
     whats_new: 新功能
     updates: 更新
     notify: 有新版本时通知我
-    notify_hint: 启动时 DBFlux 会向 GitHub 查询最新版本，不会发送任何关于您的信息。
+    notify_hint: 启动时 DBSpeed 会向 GitHub 查询最新版本，不会发送任何关于您的信息。
     show_whats_new: 每次更新后显示新功能
     show_whats_new_hint: 新版本首次启动时打开一次此更新日志。
     change_later: 稍后可在 设置 › 更新 中更改

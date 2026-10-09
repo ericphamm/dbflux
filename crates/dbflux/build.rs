@@ -94,19 +94,19 @@ impl ChannelIdentity {
     fn from_version(version: &str) -> Self {
         if version.contains("-nightly") {
             Self {
-                product_name: "DBFlux Nightly",
+                product_name: "DBSpeed Nightly",
                 icon_file: "dbflux-nightly.ico",
                 prerelease: true,
             }
         } else if version.contains("-rc") {
             Self {
-                product_name: "DBFlux",
+                product_name: "DBSpeed",
                 icon_file: "dbflux.ico",
                 prerelease: true,
             }
         } else {
             Self {
-                product_name: "DBFlux",
+                product_name: "DBSpeed",
                 icon_file: "dbflux.ico",
                 prerelease: false,
             }

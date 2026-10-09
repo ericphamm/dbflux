@@ -56,7 +56,7 @@ let
   # home-manager `buildEnv`) without colliding on `bin/dbflux`.
   isNightly = lib.hasInfix "nightly" releaseInfo.version;
   appId = if isNightly then "dbflux-nightly" else "dbflux";
-  appName = if isNightly then "DBFlux Nightly" else "DBFlux";
+  appName = if isNightly then "DBSpeed Nightly" else "DBSpeed";
   brandDir = if isNightly then "nightly" else "stable";
 in
 stdenv.mkDerivation {
@@ -181,7 +181,7 @@ stdenv.mkDerivation {
 
   meta = with lib; {
     description = "A fast, keyboard-first database client (prebuilt binary)";
-    homepage = "https://github.com/0xErwin1/dbflux";
+    homepage = "https://github.com/ericphamm/dbflux";
     license = with licenses; [ mit asl20 ];
     mainProgram = appId;
     platforms = builtins.attrNames releaseInfo.artifacts;

@@ -5,10 +5,10 @@ version: ${VERSION}
 release: 1
 section: utility
 priority: optional
-maintainer: Ignacio Perez
+maintainer: Eric Pham
 description: |
   A fast, keyboard-first database client for SQL and NoSQL databases.
-homepage: https://github.com/0xErwin1/dbflux
+homepage: https://github.com/ericphamm/dbflux
 license: MIT
 depends:
   - dbus-libs

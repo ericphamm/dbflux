@@ -37,10 +37,10 @@ esac
 
 case "$channel" in
   stable)
-    echo "gh-releases-zsync|0xErwin1|dbflux|latest|dbflux-${arch}.AppImage.zsync"
+    echo "gh-releases-zsync|ericphamm|dbflux|latest|dbflux-${arch}.AppImage.zsync"
     ;;
   nightly)
-    echo "gh-releases-zsync|0xErwin1|dbflux|nightly|dbflux-${arch}.AppImage.zsync"
+    echo "gh-releases-zsync|ericphamm|dbflux|nightly|dbflux-${arch}.AppImage.zsync"
     ;;
   rc)
     # RC releases are updated manually; no external update information.

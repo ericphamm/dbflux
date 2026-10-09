@@ -12,7 +12,7 @@ pub enum SpreadsheetError {
     NotASpreadsheet { reason: String },
 
     /// The workbook is encrypted or protected with a password to open.
-    #[error("the spreadsheet is encrypted or password protected, which DBFlux cannot read")]
+    #[error("the spreadsheet is encrypted or password protected, which DBSpeed cannot read")]
     Encrypted,
 
     /// The sheet is a chart sheet, which holds a chart and no cells.

@@ -83,7 +83,7 @@ pub fn fetch_available_update(
 
     let client = reqwest::blocking::Client::builder()
         .timeout(REQUEST_TIMEOUT)
-        .user_agent(concat!("DBFlux/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("DBSpeed/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(UpdateCheckError::Request)?;
 

@@ -157,7 +157,10 @@ impl Render for AboutSection {
                                             .flex()
                                             .flex_col()
                                             .gap_1()
-                                            .child(Text::heading("DBFlux"))
+                                            .child(Text::heading(
+                                                dbflux_core::ReleaseChannel::current()
+                                                    .display_name(),
+                                            ))
                                             .child(
                                                 Text::code(format!("{} ({})", VERSION, PROFILE))
                                                     .muted_foreground(),

@@ -344,7 +344,7 @@ impl Command {
             Command::OpenTabMenu => "Open tab menu",
             Command::MoveTabLeft => "Move tab left",
             Command::MoveTabRight => "Move tab right",
-            Command::Quit => "Quit DBFlux",
+            Command::Quit => "Quit DBSpeed",
 
             Command::FocusSidebar => "Focus sidebar",
             Command::FocusEditor => "Focus editor",

@@ -4734,7 +4734,7 @@ mod keyboard_coverage_tests {
         window.simulate_keystrokes(import);
         window.run_until_parked();
         assert!(view(window) == View::Import, "the import panel shows");
-        assert!(!external(window), "I imports a DBFlux bundle");
+        assert!(!external(window), "I imports a DBSpeed bundle");
 
         window.simulate_keystrokes("escape");
         window.run_until_parked();

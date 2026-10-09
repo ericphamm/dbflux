@@ -333,7 +333,7 @@ impl ScriptsDirectory {
 
         if overlaps(&canonical, &managed) {
             return Err(io_error(format!(
-                "{} overlaps the DBFlux scripts folder",
+                "{} overlaps the DBSpeed scripts folder",
                 canonical.display()
             )));
         }
@@ -395,7 +395,7 @@ impl ScriptsDirectory {
     fn ensure_no_overlap(&self, path: &Path) -> Result<(), DbError> {
         if overlaps(path, &self.root) {
             return Err(io_error(format!(
-                "{} overlaps the DBFlux scripts folder",
+                "{} overlaps the DBSpeed scripts folder",
                 path.display()
             )));
         }

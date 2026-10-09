@@ -403,7 +403,7 @@ pub fn approval_required_message(
         "Approval required: the policy requires a person to approve '{tool_id}' calls of class \
          {classification:?}. This call has NOT run; it was queued as pending execution \
          {pending_id}. Next steps: (1) Tell the user that pending execution {pending_id} is \
-         waiting for their approval in DBFlux (Workspace > Pending Approvals). (2) Wait for the \
+         waiting for their approval in DBSpeed (Workspace > Pending Approvals). (2) Wait for the \
          user. Do not call approve_execution or reject_execution; they are always denied to MCP \
          clients. (3) To check the status, call get_pending_execution with \
          {{\"pending_id\": \"{pending_id}\"}}: while its status is 'pending', it is still \

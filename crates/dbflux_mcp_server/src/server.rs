@@ -743,7 +743,7 @@ impl ServerHandler for DbFluxServer {
 
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "DBFlux MCP Server - AI-powered database client with governance controls.\n\
+            "DBSpeed MCP Server - AI-powered database client with governance controls.\n\
              \n\
              Supports multiple database types:\n\
              • PostgreSQL, MySQL/MariaDB\n\
@@ -755,7 +755,7 @@ impl ServerHandler for DbFluxServer {
              Approvals: a policy can require a person to approve a call. Such a call does not \
              run; it fails with error data code \"approval_required\" and a \"pending_id\". \
              Then: (1) tell the user that pending execution <pending_id> is waiting for their \
-             approval in DBFlux (Workspace > Pending Approvals); (2) wait, and never call \
+             approval in DBSpeed (Workspace > Pending Approvals); (2) wait, and never call \
              approve_execution or reject_execution, which are always denied to MCP clients; \
              (3) check the status with get_pending_execution: while its status is \"pending\", \
              it is still waiting, and status \"rejected\" carries the user's reason; (4) after \

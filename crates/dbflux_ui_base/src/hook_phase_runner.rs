@@ -693,7 +693,7 @@ where
         });
 
         if phase == HookPhase::PreConnect && hook.is_detached() && hook.ready_signal.is_none() {
-            let error = "Detached pre-connect hooks must set a ready signal before DBFlux can continue connecting"
+            let error = "Detached pre-connect hooks must set a ready signal before DBSpeed can continue connecting"
                 .to_string();
 
             cx.update(|cx| {
