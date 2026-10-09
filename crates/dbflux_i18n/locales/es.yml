@@ -1617,6 +1617,7 @@ document:
       filter:
         title: Filtro
         cell_value: Valor de celda
+        custom: "Personalizado"
       order:
         title: Orden
         remove: Quitar orden

@@ -102,7 +102,10 @@ impl DataGridPanel {
         let remove_ordering = dbflux_i18n::t!("document.data.context_menu.order.remove");
         let order_title = dbflux_i18n::t!("document.data.context_menu.order.title");
         let filter_title = dbflux_i18n::t!("document.data.context_menu.filter.title");
-        let (_, _, filter_items, value_ops_count) = self.build_filter_items(menu, backend, cx);
+        let filter_menu = self.build_filter_items(menu, backend, cx);
+        let custom_start = filter_menu.custom_start();
+        let null_start = filter_menu.null_start();
+        let filter_items = filter_menu.items;
 
         let mut rows: Vec<AnyElement> = Vec::new();
         rows.push(
@@ -162,7 +165,8 @@ impl DataGridPanel {
 
         let remove_filter_index = filter_items.len().saturating_sub(1);
         for (idx, (label, action)) in filter_items.into_iter().enumerate() {
-            if (value_ops_count > 0 && idx == value_ops_count) || idx == remove_filter_index {
+            let starts_group = (idx == custom_start && idx > 0) || idx == null_start;
+            if (starts_group && idx > 0) || idx == remove_filter_index {
                 rows.push(render_separator(cx).into_any_element());
             }
             let is_danger = matches!(action, ContextMenuAction::RemoveFilter);
@@ -305,11 +309,11 @@ impl DataGridPanel {
         let filter_selected = selected_index == filter_index;
         let submenu_selected_index = menu.submenu_selected_index;
 
-        let (_col_name_display, filter_submenu_count, filter_items, value_ops_count) =
-            self.build_filter_items(menu, backend, cx);
+        let filter_menu = self.build_filter_items(menu, backend, cx);
 
         let filter_title = dbflux_i18n::t!("document.data.context_menu.filter.title");
         let cell_value_label = dbflux_i18n::t!("document.data.context_menu.filter.cell_value");
+        let custom_label = dbflux_i18n::t!("document.data.context_menu.filter.custom");
 
         let trigger = MenuItem::new(filter_title)
             .icon(AppIcon::ListFilter)
@@ -349,11 +353,10 @@ impl DataGridPanel {
                 d.child(submenu_frame(
                     submenus_open_left,
                     Self::build_filter_submenu_flyout(
-                        filter_items,
-                        value_ops_count,
-                        filter_submenu_count,
+                        filter_menu,
                         submenu_selected_index,
                         cell_value_label,
+                        custom_label,
                         cx,
                     ),
                 ))
@@ -366,15 +369,18 @@ impl DataGridPanel {
     /// Builds the absolute-positioned flyout listing filter operators for the
     /// current cell value plus the "Remove filter" action.
     fn build_filter_submenu_flyout(
-        filter_items: Vec<(String, ContextMenuAction)>,
-        value_ops_count: usize,
-        filter_submenu_count: usize,
+        filter_menu: super::FilterMenu,
         submenu_selected_index: usize,
         cell_value_label: String,
+        custom_label: String,
         cx: &mut Context<Self>,
     ) -> Div {
-        let value_section_separator_idx = (value_ops_count > 0).then_some(value_ops_count);
-        let remove_separator_idx = filter_submenu_count.saturating_sub(1);
+        let value_ops_count = filter_menu.value_ops;
+        let custom_start = filter_menu.custom_start();
+        let has_custom = filter_menu.custom_ops > 0;
+        let null_start = filter_menu.null_start();
+        let filter_items = filter_menu.items;
+        let remove_separator_idx = filter_items.len().saturating_sub(1);
 
         let mut elements: Vec<AnyElement> = Vec::new();
 
@@ -385,9 +391,17 @@ impl DataGridPanel {
         }
 
         for (idx, (label, action)) in filter_items.into_iter().enumerate() {
-            // Separators between the value operators and the IS NULL section,
-            // and before "Remove filter".
-            if value_section_separator_idx == Some(idx) || idx == remove_separator_idx {
+            // A heading for the "type your own value" group, and a rule
+            // wherever a group starts and before "Remove filter".
+            if has_custom && idx == custom_start {
+                if idx > 0 {
+                    elements.push(render_separator(cx).into_any_element());
+                }
+                elements.push(
+                    render_menu_header(&MenuItem::header(custom_label.clone()), cx)
+                        .into_any_element(),
+                );
+            } else if (idx == null_start && idx > 0) || idx == remove_separator_idx {
                 elements.push(render_separator(cx).into_any_element());
             }
 
@@ -970,6 +984,7 @@ mod tests {
         let keys = [
             "document.data.context_menu.filter.title",
             "document.data.context_menu.filter.cell_value",
+            "document.data.context_menu.filter.custom",
             "document.data.context_menu.order.title",
             "document.data.context_menu.order.remove",
             "document.data.context_menu.generate_sql.title",
