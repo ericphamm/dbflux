@@ -125,6 +125,13 @@ pub struct DataTableState {
     /// context. Focusing needs a `Window`, which `stop_editing` does not have,
     /// so the request is raised here and consumed by `DataTable::render`.
     pending_refocus: bool,
+    /// The text the open inline editor was seeded with.
+    ///
+    /// Committing compares against this rather than against the cell: a NULL
+    /// cell opens an empty editor, and comparing that empty text with the
+    /// NULL made merely opening such a cell and clicking away look like an
+    /// edit from NULL to the empty string.
+    editing_seed: Option<String>,
 
     /// Buffer for tracking local edits before committing.
     edit_buffer: EditBuffer,
@@ -200,6 +207,7 @@ impl DataTableState {
             enum_dropdown: None,
             _editing_subs: Vec::new(),
             pending_refocus: false,
+            editing_seed: None,
             edit_buffer,
             pk_columns: Vec::new(),
             fk_columns: HashSet::new(),
@@ -1239,6 +1247,7 @@ impl DataTableState {
             return true;
         }
 
+        self.editing_seed = Some(initial_value.clone());
         let input = cx.new(|cx| {
             let mut state = InputState::new(window, cx);
             state.set_value(&initial_value, window, cx);
@@ -1456,16 +1465,22 @@ impl DataTableState {
         };
 
         self.enum_dropdown = None;
+        let seed = self.editing_seed.take();
 
         if apply {
             if let Some(input) = self.cell_input.take() {
                 let value_str = input.read(cx).value().to_string();
 
-                self.stage_cell_value(
-                    coord.row,
-                    coord.col,
-                    super::model::CellValue::text(&value_str),
-                );
+                // An untouched editor records nothing, whatever the cell
+                // holds; otherwise opening a NULL cell by accident marks its
+                // row dirty.
+                if seed.as_deref() != Some(value_str.as_str()) {
+                    self.stage_cell_value(
+                        coord.row,
+                        coord.col,
+                        super::model::CellValue::text(&value_str),
+                    );
+                }
             }
         } else {
             self.cell_input = None;
@@ -2049,6 +2064,51 @@ mod tests {
         });
 
         (state, input, window)
+    }
+
+    /// Regression: opening the editor of a NULL cell and confirming without
+    /// typing must not stage anything. The editor opens empty, and comparing
+    /// that empty text with the NULL used to look like an edit.
+    #[gpui::test]
+    fn an_untouched_editor_on_a_null_cell_stages_nothing(cx: &mut gpui::TestAppContext) {
+        use super::super::selection::CellCoord;
+        use crate::components::data_table::model::{CellValue, RowData, TableModel};
+
+        let state_holder = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let holder_clone = state_holder.clone();
+
+        let (_, window) = cx.add_window_view(move |_window, cx| {
+            let columns = two_row_model().columns.clone();
+            let rows = vec![RowData {
+                cells: vec![CellValue::int(1), CellValue::null()],
+            }];
+            let model = std::sync::Arc::new(TableModel::new(columns, rows));
+            let state = cx.new(|cx| {
+                let mut s = super::DataTableState::new(model, cx);
+                s.set_pk_columns(vec![0]);
+                s
+            });
+            holder_clone.replace(Some(state.clone()));
+            StateHarness { state }
+        });
+
+        let state = state_holder
+            .borrow()
+            .clone()
+            .expect("state entity must be created");
+
+        window.update(|window, app| {
+            state.update(app, |s, cx| {
+                assert!(s.start_editing(CellCoord::new(0, 1), window, cx));
+                s.stop_editing(true, cx);
+            })
+        });
+
+        let staged = window.update(|_, app| state.read(app).edit_buffer().row_changes(0).len());
+        assert_eq!(
+            staged, 0,
+            "an untouched NULL cell must not mark its row dirty"
+        );
     }
 
     /// Regression: typing back the value the row already holds must drop the

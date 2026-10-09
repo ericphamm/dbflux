@@ -1283,11 +1283,26 @@ impl DataTable {
         // pure horizontal scroll driven by the outer handler.
         list.style().restrict_scroll_to_axis = Some(true);
 
+        let state_for_blank = self.state.clone();
+
         div()
             .id("table-body")
             .flex_1()
             .min_h_0()
             .overflow_hidden()
+            // A click in the space below the last row lands here rather than
+            // on a cell. Treat it like selecting another cell: commit the
+            // open edit and give the table back the keyboard. Without this
+            // the editor's Blur closes it without applying, and the typed
+            // value is lost.
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                state_for_blank.update(cx, |state, cx| {
+                    if state.is_editing() {
+                        state.stop_editing(true, cx);
+                    }
+                    state.focus(window, cx);
+                });
+            })
             .child(list)
     }
 }
@@ -1568,6 +1583,10 @@ fn render_rows(
 
             div()
                 .id(("row", row_ix))
+                // Keep row clicks off the body: its handler commits the open
+                // editor, which must only happen for clicks beside the rows.
+                // Cells act on `on_click`, which still fires on this element.
+                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                 .flex()
                 .flex_shrink_0()
                 .w(px(total_width))
