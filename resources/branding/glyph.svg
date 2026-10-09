@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="DBFlux"><path d="M12 0H64V52L52 64H0V12Z M37 8L20 36H31L26 57L45 28H34L39 8Z" fill="currentColor" fill-rule="evenodd"></path></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none" role="img" aria-label="DBFlux">
+  <g stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="57" cy="29" rx="31" ry="11" />
+    <path d="M26 29v58c0 7 14 13 31 13 13 0 24-3 29-8" />
+    <path d="M88 29v23" />
+    <path d="M27 50c2 7 14 12 30 12 12 0 23-3 28-8" />
+    <path d="M27 72c2 7 14 12 30 12 5 0 10-.5 14-1.5" />
+    <path d="M35 45c5 6 8 14 14 20 10 11 23 15 43 12" />
+  </g>
+  <path d="m88 66 16 8-13 12 1-9-4-11Z" fill="currentColor" />
+</svg>
