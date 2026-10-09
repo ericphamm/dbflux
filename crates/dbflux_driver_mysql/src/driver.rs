@@ -3085,18 +3085,11 @@ fn mysql_value_to_value(row: &mysql::Row, idx: usize, col: &mysql::Column) -> Va
 
     let col_type = col.column_type();
 
-    // TINYINT(1) is MySQL's boolean type
-    // column_length() returns the display width; for TINYINT(1) it's 1
-    if col_type == ColumnType::MYSQL_TYPE_TINY
-        && col.column_length() == 1
-        && let Some(val) = row.get_opt::<Option<i8>, _>(idx)
-    {
-        match val {
-            Ok(Some(v)) => return Value::Bool(v != 0),
-            Ok(None) => return Value::Null,
-            Err(_) => {}
-        }
-    }
+    // TINYINT(1) stays a number. MySQL has no boolean type — BOOL is an
+    // alias for TINYINT(1) — and the column holds -128..127, so showing it
+    // as true/false would hide any value but 0 and 1 and read differently
+    // from every other MySQL client. The type label keeps the (1) so a flag
+    // column is still recognisable in the header.
 
     // UNSIGNED BIGINT can exceed i64::MAX, handle specially
     if col_type == ColumnType::MYSQL_TYPE_LONGLONG

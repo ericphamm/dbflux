@@ -43,6 +43,10 @@ All notable changes to DBFlux will be documented in this file.
   it showed while the table's key was still being fetched and vanished a
   moment later. It now appears only once the fetch has answered and the table
   really has no key.
+* **MySQL `TINYINT(1)` shows 0 and 1, not true/false** — MySQL has no
+  boolean type; `BOOL` is an alias for `TINYINT(1)` and the column holds any
+  small integer. The grid now shows the stored number, as DBeaver and DbGate
+  do. The type label keeps the `(1)` so a flag column is still recognisable.
 
 
 ### Added
