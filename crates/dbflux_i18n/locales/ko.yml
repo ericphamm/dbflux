@@ -1560,6 +1560,7 @@ document:
       filter:
         title: 필터
         cell_value: 셀 값
+        custom: "직접 입력"
       order:
         title: 정렬
         remove: 정렬 제거

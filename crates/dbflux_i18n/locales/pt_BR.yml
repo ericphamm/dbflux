@@ -1560,6 +1560,7 @@ document:
       filter:
         title: Filtrar
         cell_value: Valor da célula
+        custom: "Personalizado"
       order:
         title: Ordenar
         remove: Remover ordenação
