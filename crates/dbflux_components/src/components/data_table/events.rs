@@ -100,6 +100,9 @@ pub enum ContextMenuAction {
     FilterByValue(FilterOperator),
     /// Put `column <operator>` in the filter box for the user to finish.
     FilterCustom(FilterOperator),
+    /// Switch the result area between the grid and the record view, which
+    /// shows one row with a field per line.
+    ToggleRecordView,
     /// Filter: column IS NULL.
     FilterIsNull,
     /// Filter: column IS NOT NULL.

@@ -1538,6 +1538,7 @@ document:
         set_default: Set to default
         set_null: Set to NULL
         add_row: Add row
+        switch_view: "Switch view"
         inspect_row: Inspect row
         view_value: View value
         duplicate_row: Duplicate row

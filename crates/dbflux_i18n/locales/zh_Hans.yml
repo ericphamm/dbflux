@@ -1538,6 +1538,7 @@ document:
         set_default: 设为默认值
         set_null: 设为 NULL
         add_row: 添加行
+        switch_view: "切换视图"
         inspect_row: 检查行
         view_value: 查看值
         duplicate_row: 复制行

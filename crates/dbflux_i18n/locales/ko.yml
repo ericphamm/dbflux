@@ -1538,6 +1538,7 @@ document:
         set_default: 기본값으로 설정
         set_null: NULL로 설정
         add_row: 행 추가
+        switch_view: "보기 전환"
         inspect_row: 행 검사
         view_value: 값 보기
         duplicate_row: 행 복제

@@ -1538,6 +1538,7 @@ document:
         set_default: Definir como padrão
         set_null: Definir como NULL
         add_row: Adicionar linha
+        switch_view: "Alternar visualização"
         inspect_row: Inspecionar linha
         view_value: Ver valor
         duplicate_row: Duplicar linha
