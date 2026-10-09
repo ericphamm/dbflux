@@ -137,6 +137,8 @@ impl Workspace {
 
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.sync_window_title(window, cx);
+
         if let Some(command_id) = self.pending_command.take() {
             // `take` before scheduling keeps dispatch at most once across
             // re-renders; the deferred callback runs after the render pass
@@ -918,7 +920,11 @@ impl Render for Workspace {
 
                 let tab_bar_entity = self.tab_bar.clone();
 
-                let menu_x = menu.position_x;
+                let menu_x = crate::ui::document::tab_bar::clamp_tab_menu_left(
+                    menu.position_x,
+                    crate::ui::document::tab_bar::TAB_MENU_WIDTH,
+                    window.viewport_size().width,
+                );
                 let menu_y = ShellMetrics::TITLE_BAR_HEIGHT + TabMetrics::DOCUMENT_BAR_HEIGHT;
                 let items = TabBar::build_tab_menu_items();
                 let selected = menu.selected_index;

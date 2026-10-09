@@ -37,7 +37,9 @@ impl DataDocument {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let title = table.qualified_name();
+        // Just the object name: the tab bar's band above the tab carries the
+        // database, and the tooltip the qualified name.
+        let title = table.name.clone();
         let schema = table.schema.clone();
         let console_database = database.clone();
         let data_grid = cx.new(|cx| {
@@ -68,7 +70,7 @@ impl DataDocument {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let title = collection.qualified_name();
+        let title = collection.name.clone();
         let database = collection.database.clone();
         let data_grid = cx.new(|cx| {
             DataGridPanel::new_for_collection(profile_id, collection, app_state.clone(), window, cx)
@@ -344,6 +346,31 @@ impl DataDocument {
 
     pub fn focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.focus_handle.focus(window, cx);
+    }
+
+    /// The database the document belongs to, for grouping its tab with its
+    /// siblings. Query results are not tied to one database and get `None`.
+    pub fn group_label(&self, cx: &App) -> Option<String> {
+        match self.data_grid.read(cx).source() {
+            // Servers that address one database per connection (MySQL and
+            // friends) leave `database` unset and carry the database in the
+            // table's schema instead, so fall back to it rather than leaving
+            // those tabs ungrouped.
+            DataSource::Table {
+                database, table, ..
+            } => database.clone().or_else(|| table.schema.clone()),
+            DataSource::Collection { collection, .. } => Some(collection.database.clone()),
+            DataSource::QueryResult { .. } => None,
+        }
+    }
+
+    /// The qualified name the tab title leaves out, for its tooltip.
+    pub fn qualified_name(&self, cx: &App) -> Option<String> {
+        match self.data_grid.read(cx).source() {
+            DataSource::Table { table, .. } => Some(table.qualified_name()),
+            DataSource::Collection { collection, .. } => Some(collection.qualified_name()),
+            DataSource::QueryResult { .. } => None,
+        }
     }
 
     pub fn connection_id(&self, cx: &App) -> Option<Uuid> {

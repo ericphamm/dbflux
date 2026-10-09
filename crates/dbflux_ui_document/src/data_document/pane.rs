@@ -184,6 +184,16 @@ impl DataDocument {
             Box::new(move |cx| grid.update(cx, |grid, cx| grid.commit_pending_input(cx)))
         });
 
+        handle.tab_group = Some({
+            let e = entity.clone();
+            Box::new(move |cx| e.read(cx).group_label(cx).map(Into::into))
+        });
+
+        handle.tab_tooltip = Some({
+            let e = entity.clone();
+            Box::new(move |cx| e.read(cx).qualified_name(cx).map(Into::into))
+        });
+
         handle.side_panels = Some({
             let grid = entity.read(cx).data_grid.clone();
             Box::new(move |_window, cx| grid.update(cx, |grid, cx| grid.side_panels(cx)))

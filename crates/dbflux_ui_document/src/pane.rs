@@ -337,6 +337,11 @@ pub struct PaneHandle {
     /// `None`, or a closure returning `None`, shows no tooltip.
     pub tab_tooltip: Option<Box<dyn Fn(&App) -> Option<gpui::SharedString>>>,
 
+    /// Returns the database the tab belongs to. The tab bar groups
+    /// neighbouring tabs of the same connection and database under one band
+    /// carrying this label. `None` leaves the tab ungrouped.
+    pub tab_group: Option<Box<dyn Fn(&App) -> Option<gpui::SharedString>>>,
+
     /// Drains a browse-this-bucket intent raised by row activation (Enter),
     /// same `pending_*` + `take()` convention as the other optional helpers.
     /// Only `BucketsTableDocument` populates this — the workspace polls the
@@ -465,6 +470,7 @@ impl PaneHandle {
             status_segments: None,
             key_context_entries: None,
             tab_tooltip: None,
+            tab_group: None,
             take_pending_open_bucket: None,
             take_pending_open_object_editor: None,
             side_panels: None,
@@ -735,6 +741,11 @@ impl PaneHandle {
     /// The tab's hover tooltip, if the document provides one.
     pub fn tab_tooltip(&self, cx: &App) -> Option<gpui::SharedString> {
         self.tab_tooltip.as_ref().and_then(|f| f(cx))
+    }
+
+    /// The database label the tab is grouped under, if the document has one.
+    pub fn tab_group(&self, cx: &App) -> Option<gpui::SharedString> {
+        self.tab_group.as_ref().and_then(|f| f(cx))
     }
 }
 
