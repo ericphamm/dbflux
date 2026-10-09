@@ -129,6 +129,28 @@ fn global_layer() -> KeymapLayer {
         KeyChord::new("tab", Modifiers::ctrl_shift()),
         Command::PrevTab,
     );
+    // The browser chord for the same thing, which is what most people reach
+    // for: Cmd+Option+Arrow on macOS, Ctrl+Alt+Arrow on Windows.
+    layer.bind(
+        KeyChord::new("right", Modifiers::primary_alt()),
+        Command::NextTab,
+    );
+    layer.bind(
+        KeyChord::new("left", Modifiers::primary_alt()),
+        Command::PrevTab,
+    );
+    // Linux gets a second pair, because the first one does not arrive there:
+    // GNOME, KDE and XFCE all bind Ctrl+Alt+Arrow to switching workspaces and
+    // take the keystroke before any application sees it. Ctrl+PageUp and
+    // Ctrl+PageDown are what browsers use on Linux and no desktop claims them.
+    #[cfg(target_os = "linux")]
+    {
+        layer.bind(
+            KeyChord::new("pagedown", Modifiers::ctrl()),
+            Command::NextTab,
+        );
+        layer.bind(KeyChord::new("pageup", Modifiers::ctrl()), Command::PrevTab);
+    }
     // Move the active tab, as dragging it does; literal Ctrl like Ctrl+Tab.
     layer.bind(
         KeyChord::new("pageup", Modifiers::ctrl_shift()),

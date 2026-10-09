@@ -2689,3 +2689,55 @@ fn primary_p_searches_the_databases_everywhere() {
         );
     }
 }
+
+fn assert_tab_chords_resolve(keymap: &KeymapStack, next: &KeyChord, previous: &KeyChord) {
+    for context in [
+        ContextId::Global,
+        ContextId::Editor,
+        ContextId::Sidebar,
+        ContextId::Results,
+        ContextId::TextInput,
+    ] {
+        assert_eq!(
+            keymap.resolve(context, next),
+            Some(Command::NextTab),
+            "{context:?} {next}"
+        );
+        assert_eq!(
+            keymap.resolve(context, previous),
+            Some(Command::PrevTab),
+            "{context:?} {previous}"
+        );
+    }
+}
+
+/// Cmd+Option+Arrow (Ctrl+Alt+Arrow off macOS) switches tabs from every
+/// pane, a text field included, the way browsers do.
+#[test]
+fn the_browser_chord_switches_tabs_everywhere_it_is_needed() {
+    assert_tab_chords_resolve(
+        default_keymap(),
+        &KeyChord::new("right", Modifiers::primary_alt()),
+        &KeyChord::new("left", Modifiers::primary_alt()),
+    );
+}
+
+/// Ctrl+PageDown / Ctrl+PageUp exist on Linux only, where the desktop takes
+/// the arrow pair for its own workspaces before the application can see it.
+/// Elsewhere the chord stays unbound rather than showing up in the shortcut
+/// list as something the platform's browsers do not use either.
+#[test]
+fn the_page_chords_switch_tabs_on_linux_alone() {
+    let keymap = default_keymap();
+    let next = KeyChord::new("pagedown", Modifiers::ctrl());
+    let previous = KeyChord::new("pageup", Modifiers::ctrl());
+
+    #[cfg(target_os = "linux")]
+    assert_tab_chords_resolve(keymap, &next, &previous);
+
+    #[cfg(not(target_os = "linux"))]
+    for context in [ContextId::Global, ContextId::Editor, ContextId::TextInput] {
+        assert_eq!(keymap.resolve(context, &next), None, "{context:?}");
+        assert_eq!(keymap.resolve(context, &previous), None, "{context:?}");
+    }
+}
