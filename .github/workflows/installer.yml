@@ -51,6 +51,11 @@ jobs:
 
   remote-install:
     name: Remote install and uninstall
+    # The job installs the latest stable release and requires its GPG
+    # signature to check out against the key pinned in install.sh. Only the
+    # upstream repository publishes signed stable releases; a fork has neither
+    # the signing key nor, until it cuts one, a stable release to resolve.
+    if: github.repository == '0xErwin1/dbflux'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
