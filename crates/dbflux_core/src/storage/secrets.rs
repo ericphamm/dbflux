@@ -43,6 +43,23 @@ const SERVICE_NAME: &str = "dbflux";
 /// thread — on the connection-manager save path, the GPUI main thread — forever.
 pub(crate) const SECRET_STORE_OP_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// How long reading a stored secret may take before DBFlux gives up on it.
+///
+/// On macOS a read can legitimately wait for the user: when the keychain item's
+/// access list does not match the running build, the system shows a dialog
+/// asking whether DBFlux may use the item, and the read blocks until it is
+/// answered. Builds without an Apple Team ID are matched by their code hash, so
+/// this happens once per item after every update. Giving up after
+/// [`SECRET_STORE_OP_TIMEOUT`] there made the connection go out without its
+/// password and fail with "Access denied", while the dialog was still open.
+/// Elsewhere reads keep the short bound: the hung secret services it guards
+/// against never ask the user anything.
+pub(crate) const SECRET_STORE_READ_TIMEOUT: Duration = if cfg!(target_os = "macos") {
+    Duration::from_secs(120)
+} else {
+    SECRET_STORE_OP_TIMEOUT
+};
+
 /// How long DBFlux stops writing to the keyring after one write timed out.
 ///
 /// Long enough to swallow a burst of clicks on Save, short enough that saving
@@ -52,6 +69,9 @@ const WRITE_RETRY_COOLDOWN: Duration = Duration::from_secs(5);
 pub struct KeyringSecretStore {
     available: bool,
     op_timeout: Duration,
+    /// Bound on a read, which may wait for the user on macOS; see
+    /// [`SECRET_STORE_READ_TIMEOUT`].
+    read_timeout: Duration,
     /// While this deadline is in the future, writes are skipped: the last one
     /// timed out, and a blocking call cannot be killed, so its worker stays for
     /// the life of the process. The hold keeps that at one worker per cooldown
@@ -64,14 +84,21 @@ pub struct KeyringSecretStore {
 
 impl KeyringSecretStore {
     pub fn new() -> Self {
-        Self::with_timeout(SECRET_STORE_OP_TIMEOUT)
+        Self::with_timeouts(SECRET_STORE_OP_TIMEOUT, SECRET_STORE_READ_TIMEOUT)
     }
 
     /// Builds the store with an explicit bound on a single keyring call.
     pub fn with_timeout(op_timeout: Duration) -> Self {
+        Self::with_timeouts(op_timeout, op_timeout)
+    }
+
+    /// Builds the store with one bound for reads and another for every other
+    /// keyring call.
+    fn with_timeouts(op_timeout: Duration, read_timeout: Duration) -> Self {
         let mut store = Self {
             available: false,
             op_timeout,
+            read_timeout,
             write_hold: Mutex::new(None),
         };
         let available = store.check_availability();
@@ -237,7 +264,7 @@ impl SecretStore for KeyringSecretStore {
         }
 
         let secret_ref = secret_ref.to_string();
-        self.bounded("get", move || {
+        run_with_timeout("get", self.read_timeout, move || {
             let entry =
                 keyring::Entry::new(SERVICE_NAME, &secret_ref).map_err(DbError::io_message)?;
 
@@ -429,10 +456,26 @@ mod tests {
         );
     }
 
+    /// A macOS read can be waiting for the user to answer the keychain's access
+    /// dialog, which takes far longer than the bound on other calls.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn reads_wait_for_the_keychain_dialog_on_macos() {
+        assert!(SECRET_STORE_READ_TIMEOUT >= Duration::from_secs(60));
+        assert!(SECRET_STORE_READ_TIMEOUT > SECRET_STORE_OP_TIMEOUT);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn reads_keep_the_short_bound_elsewhere() {
+        assert_eq!(SECRET_STORE_READ_TIMEOUT, SECRET_STORE_OP_TIMEOUT);
+    }
+
     fn silent_keyring_store() -> KeyringSecretStore {
         KeyringSecretStore {
             available: true,
             op_timeout: Duration::from_millis(50),
+            read_timeout: Duration::from_millis(50),
             write_hold: Mutex::new(None),
         }
     }
