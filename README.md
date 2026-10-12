@@ -5,6 +5,22 @@
 > DBFlux name and artwork belong to the upstream project, so a build with
 > changes not yet merged there ships under its own name. Improvements are
 > offered upstream as pull requests.
+>
+> Install DBSpeed on macOS with Homebrew, or on Windows with Scoop. Every
+> release updates both, so `brew upgrade` and `scoop update` pick it up:
+>
+> ```bash
+> brew install --cask ericphamm/dbspeed/dbspeed
+> ```
+>
+> ```powershell
+> scoop bucket add dbspeed https://github.com/ericphamm/scoop-dbspeed
+> scoop install dbspeed/dbspeed
+> ```
+>
+> The [tap](https://github.com/ericphamm/homebrew-dbspeed) and the
+> [bucket](https://github.com/ericphamm/scoop-dbspeed) explain how to turn on
+> automatic updates.
 
 **English** · [Español](docs/es/README.md) · [한국어](docs/ko/README.md) · [简体中文](docs/zh_Hans/README.md) · [Português (Brasil)](docs/pt_BR/README.md)
 

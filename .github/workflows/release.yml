@@ -321,3 +321,83 @@ jobs:
             artifacts/macos-*/*.dmg
             artifacts/windows-*/*.zip
             artifacts/windows-*/*-setup.exe
+
+  # Points the Homebrew cask and the Scoop manifest at the release just
+  # published, so `brew upgrade` and `scoop update` pick it up. Both live in
+  # their own repositories (<owner>/homebrew-dbspeed, <owner>/scoop-dbspeed),
+  # which the workflow token cannot write to: PACKAGES_TOKEN is a token with
+  # contents write access to both. Without it the job only leaves a notice.
+  packages:
+    name: Update Homebrew and Scoop
+    needs: [classify, release]
+    if: needs.classify.outputs.channel != 'nightly' && needs.classify.outputs.draft != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+      VERSION: ${{ needs.classify.outputs.version }}
+      OWNER: ${{ github.repository_owner }}
+
+    steps:
+      - name: Skip without a token
+        if: env.PACKAGES_TOKEN == ''
+        run: echo "::notice::PACKAGES_TOKEN is not set, so the Homebrew cask and the Scoop manifest were not updated."
+
+      - name: Read the published checksums
+        if: env.PACKAGES_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir sums
+          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --dir sums \
+            --pattern 'dbflux-macos-*.dmg.sha256' --pattern 'dbflux-windows-amd64.zip.sha256'
+          {
+            echo "ARM_SHA=$(cut -d' ' -f1 sums/dbflux-macos-arm64.dmg.sha256)"
+            echo "INTEL_SHA=$(cut -d' ' -f1 sums/dbflux-macos-amd64.dmg.sha256)"
+            echo "WINDOWS_SHA=$(cut -d' ' -f1 sums/dbflux-windows-amd64.zip.sha256 | tr -d '\r')"
+          } >> "$GITHUB_ENV"
+
+      - name: Update the Homebrew cask
+        if: env.PACKAGES_TOKEN != ''
+        run: |
+          git clone --depth 1 "https://x-access-token:${PACKAGES_TOKEN}@github.com/${OWNER}/homebrew-dbspeed.git" tap
+          cd tap
+          sed -i -E \
+            -e "s/^  version \".*\"/  version \"${VERSION}\"/" \
+            -e "s/(sha256 arm: +)\"[0-9a-f]{64}\"/\1\"${ARM_SHA}\"/" \
+            -e "s/(intel: )\"[0-9a-f]{64}\"/\1\"${INTEL_SHA}\"/" \
+            Casks/dbspeed.rb
+          grep -q "version \"${VERSION}\"" Casks/dbspeed.rb
+          grep -q "${ARM_SHA}" Casks/dbspeed.rb
+          grep -q "${INTEL_SHA}" Casks/dbspeed.rb
+          if git diff --quiet; then
+            echo "The cask already points at ${VERSION}."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update DBSpeed to ${VERSION}"
+          git push
+
+      - name: Update the Scoop manifest
+        if: env.PACKAGES_TOKEN != ''
+        run: |
+          git clone --depth 1 "https://x-access-token:${PACKAGES_TOKEN}@github.com/${OWNER}/scoop-dbspeed.git" bucket-repo
+          cd bucket-repo
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/dbflux-windows-amd64.zip"
+          jq --indent 4 --arg version "$VERSION" --arg url "$url" --arg hash "$WINDOWS_SHA" \
+            '.version = $version
+             | .architecture."64bit".url = $url
+             | .architecture."64bit".hash = $hash' \
+            bucket/dbspeed.json > bucket/dbspeed.json.new
+          mv bucket/dbspeed.json.new bucket/dbspeed.json
+          if git diff --quiet; then
+            echo "The manifest already points at ${VERSION}."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update DBSpeed to ${VERSION}"
+          git push
