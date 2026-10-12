@@ -17,10 +17,12 @@ on:
         type: boolean
         default: false
     secrets:
+      # Optional. Without them the packages are built unsigned and the release
+      # carries no .asc signatures; the .sha256 checksums are still published.
       GPG_PRIVATE_KEY:
-        required: true
+        required: false
       GPG_PASSPHRASE:
-        required: true
+        required: false
       # Optional. Without them the macOS bundle is signed ad-hoc, which builds
       # and runs but gives every release a new signature, so the keychain asks
       # the user to re-authorise the saved passwords after each update.
@@ -30,6 +32,7 @@ on:
         required: false
 
 env:
+  HAS_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY != '' }}
   FEATURES: "sqlite,postgres,mysql,mssql,mongodb,redis,dynamodb,cloudwatch,influxdb,clickhouse,turso,duckdb,aws"
 
 permissions:
@@ -392,15 +395,18 @@ jobs:
           ~/go/bin/nfpm package --packager rpm --config nfpm.rpm.yaml --target ${PKG_NAME}-${VERSION}-1.${{ matrix.rpm_arch }}.rpm
 
       - name: Install signing tools
+        if: env.HAS_GPG_KEY == 'true'
         run: sudo apt-get install -y rpm debsigs
 
       - name: Import GPG key
+        if: env.HAS_GPG_KEY == 'true'
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd  # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign .deb packages
+        if: env.HAS_GPG_KEY == 'true'
         run: |
           GPG_KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 'pub' | tail -1 | awk '{print $1}')
           for deb in *.deb; do
@@ -408,6 +414,7 @@ jobs:
           done
 
       - name: Configure RPM signing
+        if: env.HAS_GPG_KEY == 'true'
         run: |
           GPG_KEY_ID=$(gpg --list-keys --keyid-format long | grep -A1 'pub' | tail -1 | awk '{print $1}')
           {
@@ -417,6 +424,7 @@ jobs:
           } > ~/.rpmmacros
 
       - name: Sign .rpm packages
+        if: env.HAS_GPG_KEY == 'true'
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
@@ -425,6 +433,7 @@ jobs:
           done
 
       - name: Sign artifacts
+        if: env.HAS_GPG_KEY == 'true'
         run: |
           gpg --armor --detach-sign dbflux-linux-${{ matrix.arch }}.tar.gz
           gpg --armor --detach-sign dbflux-${{ matrix.rpm_arch }}.AppImage
@@ -455,7 +464,9 @@ jobs:
 
             stable_name="dbflux-linux-${{ matrix.arch }}.$extension"
             cp "${packages[0]}" "$stable_name"
-            cp "${packages[0]}.asc" "$stable_name.asc"
+            if [ -f "${packages[0]}.asc" ]; then
+              cp "${packages[0]}.asc" "$stable_name.asc"
+            fi
             sha256sum "$stable_name" > "$stable_name.sha256"
           done
 
@@ -761,12 +772,14 @@ jobs:
             "$APP_BUNDLE"
 
       - name: Import GPG key
+        if: env.HAS_GPG_KEY == 'true'
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd  # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign artifacts
+        if: env.HAS_GPG_KEY == 'true'
         run: |
           gpg --armor --detach-sign dbflux-macos-${{ matrix.arch }}.dmg
 
@@ -894,12 +907,14 @@ jobs:
         run: Move-Item installer/output/dbflux-windows-amd64-setup.exe dbflux-windows-amd64-setup.exe -Force
 
       - name: Import GPG key
+        if: env.HAS_GPG_KEY == 'true'
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd  # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign artifacts
+        if: env.HAS_GPG_KEY == 'true'
         run: |
           gpg --armor --detach-sign dbflux-windows-amd64.zip
           gpg --armor --detach-sign dbflux-windows-amd64-setup.exe
