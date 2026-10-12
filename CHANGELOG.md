@@ -31,6 +31,30 @@ All notable changes to DBFlux will be documented in this file.
 * **Edits in the data grid that were not saved** — An edit that only swapped whitespace in a value, such as a space for a tab or a line break, or that only changed text past the value's 200th character, is now saved; before, it was dropped without a message. Set NULL on a cell holding the text `NULL`, and Unset field on a document field holding the text `missing`, now take effect. Committing a decimal value such as `1.0` without changing it no longer saves it again. Pasting a cell's copied value back onto the same cell no longer stages a change; before, a NULL cell was set to an empty string, and a long value, or one with Windows line breaks, could be overwritten by its copy, in which tabs and line breaks are spaces. A row whose delete is undone keeps its cell edits, so Save all saves them. Undo and redo no longer change a table that cannot be edited.
 * **File pickers report a missing system file dialog** — Import Script and Add External Scripts Folder in the Scripts view, Open Script File, the SSH key, SSL certificate, SSL key and database file pickers in the connection manager, and the SSH key picker in the SSH tunnel settings now show an error when the system has no native file dialog. Before, the click did nothing.
 
+## [0.10.0-dev.0] - 2026-10-12
+
+These changes are in DBSpeed, this fork of DBFlux, and not yet in DBFlux itself.
+
+### Added
+
+* **Search every connected database** — `Cmd+P` on macOS (`Ctrl+P` elsewhere) lists the tables and collections of every connected database, including databases whose schema the sidebar has not loaded yet, and picking one opens it and selects it in the sidebar. Names that contain the typed text in one piece rank above scattered matches. In the editor, Open saved queries moves to `Cmd+Alt+P` (`Ctrl+Alt+P`).
+* **Select sidebar items by typing** — With the sidebar focused, typing the start of a name selects the first item that matches, and letters typed in quick succession extend the name. Only letters, digits and underscores are taken this way, and a key that matches nothing keeps its usual shortcut.
+* **Connection colours** — Choose color in a connection's menu gives it one of eight colours, or Automatic. The colour fills the square before the connection's name while it is connected, outlines it while it is not, and colours the band above that connection's tabs.
+* **Tabs grouped by database** — Tabs of the same database sit under a coloured band that names it. A tab shows the bare table name, with the schema-qualified name in its tooltip, tabs can be dragged to a new place, the active tab scrolls into view, and the window title names the active tab and its database.
+* **Switch tabs with the browser chord** — `Cmd+Option+Right` and `Cmd+Option+Left` on macOS, and `Ctrl+Alt+Right` and `Ctrl+Alt+Left` on Windows, move to the next and previous tab. Linux uses `Ctrl+PageDown` and `Ctrl+PageUp`, because desktops take the arrow chord for switching workspaces.
+* **Filter on a value that is not in the grid** — The Filter submenu of the cell menu, and the column header menu, have a Custom group with `=`, `<>`, `>` and `<`. Picking one writes the column and operator into the filter bar and focuses it, so only the value is left to type.
+* **Record view on Tab** — In the results, `Tab` switches between the grid and the record view of the active row, and the cell menu lists it as Switch view.
+* **Rows load as the grid scrolls** — A table opens with its first 100 rows, and the next 100 arrive when the grid is scrolled near the last one, keeping the selection, scroll position and unsaved edits. The status bar reads, for example, `300 of 12480 rows`. The LIMIT field is empty by default and shows `all`; a number caps how many rows load. Collections still page as before.
+
+### Changed
+
+* **DBSpeed name and icon** — This fork's builds are called DBSpeed and have their own icon. They install beside DBFlux instead of over it, and look for updates in this fork's repository. Connections, settings and history stay where DBFlux keeps them, so an existing installation keeps them.
+* **MySQL TINYINT(1) shows the stored number** — A `TINYINT(1)` column shows `1` and `0`, as DBeaver and DbGate do, instead of `true` and `false`.
+
+### Fixed
+
+* **A NULL cell left untouched stays clean** — Opening the editor on a NULL cell and leaving it without typing no longer stages an empty string. Clicking below the last row now saves the edit in progress instead of discarding it.
+
 ## [0.8.9] - 2026-10-08
 
 ### Fixed
