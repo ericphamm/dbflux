@@ -60,7 +60,7 @@ All notable changes to DBFlux will be documented in this file.
 * **Controls a screen reader could not name** — A control that draws no text of its own was announced as a bare button, checkbox or switch, and UI automation could find it only by its element id. An icon-only button now takes its name from its label or tooltip, and the SQL preview dialog's options, the schema diagram's Types and Indexes switches (with their on/off state), the schema diff's selection boxes (with their selected state), the close button of every tab and dialog, the pager arrows of a result footer, the sidebar's expand arrows (with their expanded state) and the checkboxes of a multi-select and of the unsaved-changes dialog are each named after the text shown next to them. See Contributing.
 * **The controls a screen reader could not name, and the state it could not read** — The passphrase visibility toggle of the import and export dialogs, a dropdown whose trigger draws only a chevron (the SQL toolbar's auto-refresh interval), and the `⋯` menu button of a sidebar row were announced without a name; each one now names the action it performs, including the field or row it acts on. The chart toolbar's statistics button says whether the statistics rail is on, and the rows of a menu are announced as menu items. See Contributing.
 
-## [0.10.0-rc.1] - 2026-10-12
+## [0.10.0-rc.2] - 2026-10-12
 
 These changes are in DBSpeed, this fork of DBFlux, and not yet in DBFlux itself.
 
