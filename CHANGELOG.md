@@ -53,6 +53,8 @@ These changes are in DBSpeed, this fork of DBFlux, and not yet in DBFlux itself.
 
 ### Fixed
 
+* **Closed windows release their memory on macOS** — Each window opened and closed, such as Edit Connection, the connection manager or Settings, left 30 to 50 MB of graphics memory behind, so after a day of use DBSpeed could hold close to a gigabyte. A closed window now frees its memory, and the total falls back once the window is gone.
+
 * **A NULL cell left untouched stays clean** — Opening the editor on a NULL cell and leaving it without typing no longer stages an empty string. Clicking below the last row now saves the edit in progress instead of discarding it.
 
 ## [0.8.9] - 2026-10-08
