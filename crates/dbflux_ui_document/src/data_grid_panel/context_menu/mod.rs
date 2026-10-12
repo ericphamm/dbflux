@@ -53,12 +53,12 @@ pub(super) struct FilterMenu {
 
 impl FilterMenu {
     /// Index of the first "type your own value" entry.
-    pub fn custom_start(&self) -> usize {
+    pub(super) fn custom_start(&self) -> usize {
         self.value_ops
     }
 
     /// Index of the first IS NULL entry.
-    pub fn null_start(&self) -> usize {
+    pub(super) fn null_start(&self) -> usize {
         self.value_ops + self.custom_ops
     }
 }
