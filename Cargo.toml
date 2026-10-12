@@ -252,6 +252,7 @@ indexing_slicing = "warn"
 # editor patches; see their `VENDOR.md` files.
 [patch.crates-io]
 gpui-pre = { path = "vendor/gpui-pre" }
+gpui-pre-macos = { path = "vendor/gpui-pre-macos" }
 gpui-base = { path = "vendor/gpui-base" }
 gpui-component = { path = "vendor/gpui-component" }
 
