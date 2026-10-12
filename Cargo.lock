@@ -3281,7 +3281,7 @@ dependencies = [
 
 [[package]]
 name = "dbflux_driver_duckdb"
-version = "0.9.0-dev.0"
+version = "0.10.0-dev.0"
 dependencies = [
  "chrono",
  "dbflux_core",
