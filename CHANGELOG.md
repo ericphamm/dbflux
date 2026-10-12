@@ -82,6 +82,10 @@ These changes are in DBSpeed, this fork of DBFlux, and not yet in DBFlux itself.
 
 ### Fixed
 
+* **The first connection after an update no longer fails** — After an update, macOS asks once per saved password whether DBSpeed may use it. DBSpeed stopped waiting for that answer after five seconds and connected without the password, so the first attempt failed with "Access denied". It now waits for the answer.
+
+* **No "no primary key" flash when opening a table** — Opening a table whose primary key was not known yet could flash the yellow "This table has no primary key" banner for a moment, even though the table has one. The banner now waits until the table has been read with its key.
+
 * **Closed windows release their memory on macOS** — Each window opened and closed, such as Edit Connection, the connection manager or Settings, left 30 to 50 MB of graphics memory behind, so after a day of use DBSpeed could hold close to a gigabyte. A closed window now frees its memory, and the total falls back once the window is gone.
 
 * **A NULL cell left untouched stays clean** — Opening the editor on a NULL cell and leaving it without typing no longer stages an empty string. Clicking below the last row now saves the edit in progress instead of discarding it.
