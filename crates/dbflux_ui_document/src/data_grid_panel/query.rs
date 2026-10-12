@@ -379,6 +379,7 @@ impl DataGridPanel {
 
                         entity.update(cx, |panel, cx| {
                             panel.runner.fail_primary(task_id, e.to_string(), cx);
+                            panel.pk_requery_pending = false;
                             panel.refresh.state = GridState::Error;
                             panel.pending.toast = Some(PendingToast {
                                 message: crate::labels::query_failed_error(&e.to_string()),
@@ -842,6 +843,7 @@ impl DataGridPanel {
         append: bool,
         cx: &mut Context<Self>,
     ) {
+        self.pk_requery_pending = false;
         let requested = pagination.limit();
         let batch_rows = result.row_count();
 
