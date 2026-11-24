@@ -384,6 +384,12 @@ impl DataTableState {
         cx.emit(DataTableEvent::MoreRowsRequested);
     }
 
+    /// Forget that the next rows were requested for the current row count,
+    /// so the end coming into view asks again. Used when the request failed.
+    pub fn forget_more_rows_request(&mut self) {
+        self.more_rows_requested_at = None;
+    }
+
     /// Append a batch of base rows below the loaded ones.
     ///
     /// Unlike `set_model`, this keeps the selection, scroll position, column

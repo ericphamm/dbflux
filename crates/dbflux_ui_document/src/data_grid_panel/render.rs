@@ -349,6 +349,13 @@ impl DataGridPanel {
             }
         }
 
+        // The table asked for the next batch while scrolling near its last
+        // loaded row. A refresh just above replaced the rows and is loading,
+        // so `load_more_rows` turns the request down in that case.
+        if std::mem::take(&mut self.pending.load_more) {
+            self.load_more_rows(window, cx);
+        }
+
         if self.context_menu.is_none() {
             self.pending.context_menu_focus = false;
         } else if std::mem::take(&mut self.pending.context_menu_focus) {
