@@ -10778,6 +10778,17 @@ mod tests {
             Ok(rows.clone())
         }
 
+        fn count_table(
+            &self,
+            _: &dbflux_core::TableCountRequest,
+        ) -> Result<u64, dbflux_core::DbError> {
+            let rows = self
+                .rows
+                .lock()
+                .map_err(|_| dbflux_core::DbError::NotSupported("poisoned".to_string()))?;
+            Ok(rows.row_count() as u64)
+        }
+
         fn cancel(&self, _: &dbflux_core::QueryHandle) -> Result<(), dbflux_core::DbError> {
             Ok(())
         }
@@ -13343,6 +13354,39 @@ mod tests {
                 assert!(
                     !panel.pending.load_more,
                     "the next render must take the request for more rows"
+                );
+            });
+        });
+
+        // Rows inserted after the table was counted: full batches keep coming
+        // past the old count of 386, so loading must not stop there.
+        window.update(|_, app| {
+            panel.update(app, |panel, cx| {
+                for batch in 1..4 {
+                    let rows = (batch * 100..(batch + 1) * 100)
+                        .map(|i| vec![dbflux_core::Value::Int(i)])
+                        .collect();
+                    let result = QueryResult::table(
+                        vec![key_column("id", true)],
+                        rows,
+                        None,
+                        Duration::ZERO,
+                    );
+                    panel.apply_table_result(
+                        Uuid::nil(),
+                        table.clone(),
+                        Pagination::default().with_offset(batch as u64 * 100),
+                        order_by.clone(),
+                        None,
+                        result,
+                        true,
+                        cx,
+                    );
+                }
+                assert_eq!(panel.result.rows.len(), 400);
+                assert!(
+                    panel.can_load_more(),
+                    "a full batch past a stale row count must allow another"
                 );
             });
         });
