@@ -13282,6 +13282,72 @@ mod tests {
         });
     }
 
+    #[gpui::test]
+    fn the_first_batch_of_a_larger_table_allows_another(cx: &mut TestAppContext) {
+        init_test_runtime(cx);
+        let app_state = isolated_test_app_state(cx);
+        let panel_holder = Rc::new(RefCell::new(None));
+        let panel_handle = panel_holder.clone();
+        let table = TableRef::with_schema("monixa", "pingen_traffic");
+        let order_by = vec![dbflux_core::OrderByColumn::asc("id")];
+        let (_, window) = cx.add_window_view(|window, cx| {
+            let panel = cx.new(|cx| {
+                let source = DataSource::Table {
+                    profile_id: Uuid::nil(),
+                    database: Some("monixa".to_string()),
+                    table: table.clone(),
+                    pagination: Pagination::default(),
+                    order_by: order_by.clone(),
+                    total_rows: Some(386),
+                };
+                DataGridPanel::new_internal(
+                    source,
+                    app_state.clone(),
+                    vec!["id".to_string()],
+                    window,
+                    cx,
+                )
+            });
+            panel_handle.replace(Some(panel.clone()));
+            Root::new(panel, window, cx)
+        });
+        let panel = panel_holder.borrow().clone().expect("panel");
+        window.update(|_, app| {
+            panel.update(app, |panel, cx| {
+                let rows = (0..100).map(|i| vec![dbflux_core::Value::Int(i)]).collect();
+                let result =
+                    QueryResult::table(vec![key_column("id", true)], rows, None, Duration::ZERO);
+                panel.apply_table_result(
+                    Uuid::nil(),
+                    table.clone(),
+                    Pagination::default(),
+                    order_by.clone(),
+                    Some(386),
+                    result,
+                    false,
+                    cx,
+                );
+                assert!(
+                    panel.can_load_more(),
+                    "the first 100 of 386 rows must allow another batch"
+                );
+            });
+        });
+
+        // Scrolling near the last loaded row leaves the request for the next
+        // render, which must act on it rather than let it sit.
+        window.update(|window, app| {
+            panel.update(app, |panel, cx| {
+                panel.pending.load_more = true;
+                panel.process_pending_actions(window, cx);
+                assert!(
+                    !panel.pending.load_more,
+                    "the next render must take the request for more rows"
+                );
+            });
+        });
+    }
+
     /// The LIMIT field caps what the grid loads; batches stay the default size
     /// and only the last one before the cap is shortened.
     #[gpui::test]

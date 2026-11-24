@@ -380,6 +380,13 @@ impl DataGridPanel {
                         entity.update(cx, |panel, cx| {
                             panel.runner.fail_primary(task_id, e.to_string(), cx);
                             panel.pk_requery_pending = false;
+                            // A failed batch must not stop the grid from asking
+                            // again once the end of the rows is back in view.
+                            if append
+                                && let Some(table_state) = panel.grid_table.table_state.clone()
+                            {
+                                table_state.update(cx, |state, _| state.forget_more_rows_request());
+                            }
                             panel.refresh.state = GridState::Error;
                             panel.pending.toast = Some(PendingToast {
                                 message: crate::labels::query_failed_error(&e.to_string()),
