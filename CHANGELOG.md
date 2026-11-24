@@ -82,6 +82,8 @@ These changes are in DBSpeed, this fork of DBFlux, and not yet in DBFlux itself.
 
 ### Fixed
 
+* **Table rows load as you scroll, all the way to the last one** — A table showed only its first 100 rows; scrolling to the end did not fetch the next batch. It now does, and it keeps going past the row count read when the table opened, so rows inserted since then appear too. Refresh counts the rows again, so the count above the grid stays current.
+
 * **The first connection after an update no longer fails** — After an update, macOS asks once per saved password whether DBSpeed may use it. DBSpeed stopped waiting for that answer after five seconds and connected without the password, so the first attempt failed with "Access denied". It now waits for the answer.
 
 * **No "no primary key" flash when opening a table** — Opening a table whose primary key was not known yet could flash the yellow "This table has no primary key" banner for a moment, even though the table has one. The banner now waits until the table has been read with its key.
