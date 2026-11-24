@@ -109,14 +109,13 @@ impl DataGridPanel {
                 table,
                 pagination,
                 order_by,
-                total_rows,
+                ..
             } => {
                 let profile_id = *profile_id;
                 let database = database.clone();
                 let table = table.clone();
                 let pagination = pagination.clone();
                 let order_by = order_by.clone();
-                let total_rows = *total_rows;
 
                 if let Some(select) = self.builder.visual_select.clone() {
                     self.run_visual_query(profile_id, database.clone(), select, window, cx);
@@ -127,14 +126,15 @@ impl DataGridPanel {
                         self.fetch_grouped_total_count(profile_id, database, spec, cx);
                     }
                 } else {
-                    // A refresh starts over from the first batch.
+                    // A refresh starts over from the first batch and counts
+                    // the rows again, since the table may have changed.
                     self.run_table_query(
                         profile_id,
                         database,
                         table,
                         pagination.reset_offset(),
                         order_by,
-                        total_rows,
+                        None,
                         false,
                         window,
                         cx,
@@ -984,17 +984,17 @@ impl DataGridPanel {
     }
 
     /// Record whether the batch that just arrived was the last one.
+    ///
+    /// The row count is not consulted: it was read when the table opened, and
+    /// rows inserted since then would be cut off at that old count. A short
+    /// batch is the only reliable sign that the table has no more rows.
     fn note_batch_end(&mut self, batch_rows: usize, requested: u32) {
         let loaded = self.result.rows.len() as u64;
         let cap_reached = self
             .filter_bar
             .row_cap
             .is_some_and(|cap| loaded >= u64::from(cap));
-        let total_reached = self
-            .source
-            .total_rows()
-            .is_some_and(|total| loaded >= total);
-        self.refresh.reached_end = batch_rows < requested as usize || cap_reached || total_reached;
+        self.refresh.reached_end = batch_rows < requested as usize || cap_reached;
     }
 
     pub(super) fn fetch_total_count(
